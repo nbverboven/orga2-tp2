@@ -43,22 +43,20 @@ void C_convertYUVtoRGB(uint8_t* src, uint32_t srcw, uint32_t srch,
                        uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused))) {
 
 	uint8_t *A, *B, *G, *R, V, U, Y; 
-	uint32_t i = 0;
-	while(i < 4*srch){ // No se por que si no multiplico por 4 hace solo 1/4 de la imagen
 
 		uint32_t j = 0;
-		while(j < srcw){
+		while(j < srch*srcw){
 
-			V = *(src+srcw*i+j+1);
-			U = *(src+srcw*i+j+2);
-			Y = *(src+srcw*i+j+3);
+			V = *(src+j+1);
+			U = *(src+j+2);
+			Y = *(src+j+3);
 
-			A = dst+srcw*i+j;
-			B = dst+srcw*i+j+1;
-			G = dst+srcw*i+j+2;
-			R = dst+srcw*i+j+3;
+			A = dst+j;
+			B = dst+j+1;
+			G = dst+j+2;
+			R = dst+j+3;
 
-			*A = *(src+srcw*i+j); // La componente A se mantiene igual
+			*A = *(src+j); // La componente A se mantiene igual
 			*R = fmax(fmin(((298 * (Y - 16) + 409 * (V - 128) + 128) >> 8),255),0);
 			*G = fmax(fmin(((298 * (Y - 16) - 100 * (U - 128) - 208 * (V - 128) + 128) >> 8),255),0);
 			*B = fmax(fmin(((298 * (Y - 16) + 516 * (U - 128) + 128) >> 8),255),0);
@@ -66,6 +64,4 @@ void C_convertYUVtoRGB(uint8_t* src, uint32_t srcw, uint32_t srch,
 			j += 4;
 		}
 
-		i++;	
-	}
 }
