@@ -26,9 +26,9 @@ void C_convertRGBtoYUV(uint8_t* src, uint32_t srcw, uint32_t srch,
 			Y = dst+j+3;
 
 			*A = *(src+j); // La componente A se mantiene igual
-			*Y = fmin((((66 * R + 129 * G + 25 * B + 128) >> 8) + 16),255);
-			*U = fmax(fmin((((-38 * R - 74 * G + 112 * B + 128) >> 8) + 128),255),0);
-			*V = fmax(fmin((((112 * R - 94 * G - 18 * B + 128) >> 8) + 128),255),0);
+			*Y = fmin( (((66 * R + 129 * G + 25 * B + 128) >> 8) + 16) ,255);
+			*U = fmax(fmin( (((-38 * R - 74 * G + 112 * B + 128) >> 8) + 128) ,255),0);
+			*V = fmax(fmin( (((112 * R - 94 * G - 18 * B + 128) >> 8) + 128) ,255),0);
 
 			j += 4;
 		}
