@@ -1,2 +1,6 @@
 *.o
+*.bmp
 bin
+src/tp2
+src/tools/diff
+src/bmp/example
