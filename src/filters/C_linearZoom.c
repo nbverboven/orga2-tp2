@@ -13,7 +13,7 @@ void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
 {
 	/*****************************
 		Nico está haciendo esto
-	******************************/
+	
 
 	uint8_t *img_m_A, *img_m_B, *img_m_G, *img_m_R,
 	         img_o_A,  img_o_B,  img_o_G,  img_o_R;
@@ -197,5 +197,6 @@ void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
 
 		fila_img_modificada += 2;
 	}
+	******************************/
 }
 
