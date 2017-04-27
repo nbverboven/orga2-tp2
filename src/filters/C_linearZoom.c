@@ -8,18 +8,17 @@
 #include "filters.h"
 #include <math.h>
 
-void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
-                  uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+void agregoIguales(uint8_t* src, uint32_t srcw, uint32_t srch,
+                   uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
 {
 	RGBA (*matrix_src)[srcw] = (RGBA (*)[srcw]) src;
 	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
-	// Primero copio los pixeles que no se modifican
+	uint32_t columna_dst;
+	uint32_t columna_src;
 
 	uint32_t fila_dst = 1;
 	uint32_t fila_src = 0;
-	uint32_t columna_dst;
-	uint32_t columna_src;
 
 	while ( fila_dst < dsth )
 	{
@@ -39,16 +38,22 @@ void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
 
 		fila_dst += 2;
 		fila_src += 1;
-	}
+	}	
+}
+
+
+void agregoEntre2(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+{
+	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
 	uint8_t img_m_ant_A, img_m_ant_B, img_m_ant_G, img_m_ant_R,
 	        img_m_sig_A, img_m_sig_B, img_m_sig_G, img_m_sig_R;
 
-	// Ahora voy a agregar los pixeles que están entre dos de los originales (recorro filas)
+	uint32_t fila_dst;
+	uint32_t columna_dst;
 
-
+	// Recorro columnas
 	fila_dst = 1;
-
 
 	while ( fila_dst < dsth )
 	{
@@ -77,8 +82,7 @@ void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
 		fila_dst += 2;
 	}
 
-	// Ahora voy a agregar los pixeles que están entre dos de los originales (recorro columnas)
-
+	// Recorro filas
 	columna_dst = 0;
 
 	while ( columna_dst < dstw-1 )
@@ -107,14 +111,20 @@ void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
 
 		columna_dst += 2;
 	}
+}
 
-	// // Agrego los pixeles que están entre cuatro de los originales
+
+void agregoEntre4(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+{
+	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
 	uint32_t img_m_arriba_izq_A, img_m_arriba_izq_B, img_m_arriba_izq_G, img_m_arriba_izq_R,
-	          img_m_arriba_der_B, img_m_arriba_der_G, img_m_arriba_der_R,
-	           img_m_abajo_izq_B,  img_m_abajo_izq_G,  img_m_abajo_izq_R,
-	           img_m_abajo_der_B,  img_m_abajo_der_G,  img_m_abajo_der_R;
+	                             img_m_arriba_der_B, img_m_arriba_der_G, img_m_arriba_der_R,
+	                             img_m_abajo_izq_B,  img_m_abajo_izq_G,  img_m_abajo_izq_R,
+	                             img_m_abajo_der_B,  img_m_abajo_der_G,  img_m_abajo_der_R;
 
+	uint32_t fila_dst;
+	uint32_t columna_dst;
 
 	fila_dst = 2;
 
@@ -151,6 +161,15 @@ void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
 
 		fila_dst += 2;
 	}
+}
+
+
+void agregoBordes(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+{
+	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
+
+	uint32_t fila_dst;
+	uint32_t columna_dst;
 
 	// Borde inferior
 
@@ -179,5 +198,21 @@ void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
 
 		fila_dst += 1;
 	}
+}
 
+
+void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
+                  uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+{
+	// Primero copio los pixeles que no se modifican
+	agregoIguales(src, srcw, srch, dst, dstw, dsth);
+
+	// Ahora voy a agregar los pixeles que están entre dos de los originales
+	agregoEntre2(dst, dstw, dsth);
+
+	// Agrego los pixeles que están entre cuatro de los originales
+	agregoEntre4(dst, dstw, dsth);
+
+	// Agrego los bordes derecho e inferior
+	agregoBordes(dst, dstw, dsth);
 }
