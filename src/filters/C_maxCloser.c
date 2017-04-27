@@ -16,7 +16,7 @@ uint32_t getInRange(uint32_t p, uint32_t g , uint32_t dst){
         if(ret > (dst+1)*4)
             ret = (dst+1)*4;
     }else
-        ret = 0;
+        ret = p+g;
 
     return ret;
 }
@@ -29,6 +29,10 @@ void C_maxCloser(uint8_t* src, uint32_t srcw, uint32_t srch,
 
     uint32_t b, gH,gW, ph,pw, w,h;
     uint32_t k = 0;
+
+    //RGBA (*matrix_src)[srcw] = RGBA (*)[srcw] src;
+    //RGBA (*matrix_src)[srcw][srch] = RGBA (*)[srcw][srch] src;
+    //matrix_src[fila][col].g
 
     while(k < 4*((srch+1)*srcw+1)){
     //while(k < 4*srch*srcw){
@@ -56,7 +60,7 @@ void C_maxCloser(uint8_t* src, uint32_t srcw, uint32_t srch,
                 h = getInRange(ph,gH,dsth);
 
                 while( ph<7 ){
-                        
+
                     maxR = fmax( *(src+(w*h*4)+3), maxR );
                     maxG = fmax( *(src+(w*h*4)+2), maxG );
                     maxB = fmax( *(src+(w*h*4)+1), maxB );
@@ -72,8 +76,8 @@ void C_maxCloser(uint8_t* src, uint32_t srcw, uint32_t srch,
                 }//END While
 
 
-            pw = pw+1;
-            w = getInRange(pw,gW,dstw);
+                pw = pw+1;
+                w = getInRange(pw,gW,dstw);
             }//END While
             
             /** fin calculo el max **/
