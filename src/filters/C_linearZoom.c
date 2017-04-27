@@ -208,57 +208,72 @@ void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
 	        ESTO NO ANDAAAAAAAAAAA
 	************************************/
 
-	// uint32_t indice_img_modificada_arriba;
-	// uint32_t indice_img_modificada_izquierda;
+	uint32_t indice_img_modificada_arriba;
+	uint32_t indice_img_modificada_izquierda;
 
-	// columna_img_modificada = 0;
+	columna_img_modificada = 0;
 
-	// while ( columna_img_modificada < dstw )
-	// {
-	// 	indice_img_modificada = 4*columna_img_modificada;
-	// 	indice_img_modificada_arriba = 4*dstw + 4*columna_img_modificada; // Arriba del borde de abajo
-	// 	indice_img_modificada_izquierda = 4*dstw*dsth - 4*dstw*columna_img_modificada - 1; // A la izquierda del borde derecho
+	// Borde inferior
+	while ( columna_img_modificada < dstw )
+	{
+		indice_img_modificada = 4*columna_img_modificada;
+		indice_img_modificada_arriba = 4*dstw + 4*columna_img_modificada; // Arriba del borde de abajo
 
-	// 	img_m_ant_A = *(dst + indice_img_modificada_arriba + A32);
-	// 	img_m_ant_B = *(dst + indice_img_modificada_arriba + B32);
-	// 	img_m_ant_G = *(dst + indice_img_modificada_arriba + G32);
-	// 	img_m_ant_R = *(dst + indice_img_modificada_arriba + R32);
+		img_m_ant_A = *(dst + indice_img_modificada_arriba + A32);
+		img_m_ant_B = *(dst + indice_img_modificada_arriba + B32);
+		img_m_ant_G = *(dst + indice_img_modificada_arriba + G32);
+		img_m_ant_R = *(dst + indice_img_modificada_arriba + R32);
 
-	// 	img_m_sig_A = *(dst + indice_img_modificada_izquierda + A32);
-	// 	img_m_sig_B = *(dst + indice_img_modificada_izquierda + B32);
-	// 	img_m_sig_G = *(dst + indice_img_modificada_izquierda + G32);
-	// 	img_m_sig_R = *(dst + indice_img_modificada_izquierda + R32);
+		// img_m_sig_A = *(dst + indice_img_modificada_izquierda + A32);
+		// img_m_sig_B = *(dst + indice_img_modificada_izquierda + B32);
+		// img_m_sig_G = *(dst + indice_img_modificada_izquierda + G32);
+		// img_m_sig_R = *(dst + indice_img_modificada_izquierda + R32);
 
-	// 	if ( columna_img_modificada < dstw-1 )
-	// 	{
-	// 		indice_img_modificada = 4*dstw*dsth - 4*dstw*columna_img_modificada;
+		img_m_A = dst + indice_img_modificada + A32;
+		img_m_B = dst + indice_img_modificada + B32;
+		img_m_G = dst + indice_img_modificada + G32;
+		img_m_R = dst + indice_img_modificada + R32;
 
-	// 		img_m_A = dst + indice_img_modificada + A32;
-	// 		img_m_B = dst + indice_img_modificada + B32;
-	// 		img_m_G = dst + indice_img_modificada + G32;
-	// 		img_m_R = dst + indice_img_modificada + R32;
-
-	// 		// *img_m_A = fmax( fmin( ( img_m_ant_A + img_m_sig_A ) >> 2, 255), 0 );
-	// 		*img_m_A = img_m_ant_A,
-	// 		*img_m_B = fmax( fmin( img_m_ant_B, 255), 0 );
-	// 		*img_m_G = fmax( fmin( img_m_ant_G, 255), 0 );
-	// 		*img_m_R = fmax( fmin( img_m_ant_R, 255), 0 );
-	// 	}
+		// *img_m_A = fmax( fmin( ( img_m_ant_A + img_m_sig_A ) >> 2, 255), 0 );
+		*img_m_A = img_m_ant_A;
+		*img_m_B = fmax( fmin( img_m_ant_B, 255), 0 );
+		*img_m_G = fmax( fmin( img_m_ant_G, 255), 0 );
+		*img_m_R = fmax( fmin( img_m_ant_R, 255), 0 );
 
 
-	// 	img_m_A = dst + indice_img_modificada + A32;
-	// 	img_m_B = dst + indice_img_modificada + B32;
-	// 	img_m_G = dst + indice_img_modificada + G32;
-	// 	img_m_R = dst + indice_img_modificada + R32;
+		columna_img_modificada += 1;
+	}
 
-	// 	// *img_m_A = fmax( fmin( ( img_m_ant_A + img_m_sig_A ) >> 2, 255), 0 );
-	// 	*img_m_A = img_m_ant_A,
-	// 	*img_m_B = fmax( fmin( img_m_sig_B, 255), 0 );
-	// 	*img_m_G = fmax( fmin( img_m_sig_G, 255), 0 );
-	// 	*img_m_R = fmax( fmin( img_m_sig_R, 255), 0 );
+	
+
+	fila_img_modificada = 1;
 
 
-	// 	columna_img_modificada += 1;
-	// }
+	while ( fila_img_modificada <= dsth )
+	{
+		indice_img_modificada = 4*dstw*fila_img_modificada -4;
+		indice_img_modificada_izquierda = 4*dstw*fila_img_modificada -8; // A la izquierda del borde derecho
+
+		img_m_sig_A = *(dst + indice_img_modificada_izquierda + A32);
+		img_m_sig_B = *(dst + indice_img_modificada_izquierda + B32);
+		img_m_sig_G = *(dst + indice_img_modificada_izquierda + G32);
+		img_m_sig_R = *(dst + indice_img_modificada_izquierda + R32);
+
+		img_m_A = dst + indice_img_modificada + A32;
+		img_m_B = dst + indice_img_modificada + B32;
+		img_m_G = dst + indice_img_modificada + G32;
+		img_m_R = dst + indice_img_modificada + R32;
+
+		// *img_m_A = fmax( fmin( ( img_m_ant_A + img_m_sig_A ) >> 2, 255), 0 );
+		*img_m_A = img_m_ant_A;
+		*img_m_B = img_m_sig_B;
+		*img_m_G = img_m_sig_G;
+		*img_m_R = img_m_sig_R;
+
+		fila_img_modificada += 1;
+	}
+
+
+
 
 }
