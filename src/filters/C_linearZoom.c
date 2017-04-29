@@ -8,257 +8,211 @@
 #include "filters.h"
 #include <math.h>
 
-void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
-                  uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+void agregoIguales(uint8_t* src, uint32_t srcw, uint32_t srch,
+                   uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
 {
-	uint8_t *img_m_A, *img_m_B, *img_m_G, *img_m_R,
-	         img_o_A,  img_o_B,  img_o_G,  img_o_R;
+	RGBA (*matrix_src)[srcw] = (RGBA (*)[srcw]) src;
+	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
-	// Primero copio los pixeles que no se modifican
+	uint32_t columna_dst;
+	uint32_t columna_src;
 
-	uint32_t indice_img_original = 0;
-	uint32_t fila_img_modificada = 1;
-	uint32_t columna_img_modificada;
-	uint32_t indice_img_modificada;
+	uint32_t fila_dst = 1;
+	uint32_t fila_src = 0;
 
-	while ( fila_img_modificada < dsth )
+	while ( fila_dst < dsth )
 	{
-		columna_img_modificada = 0;
+		columna_dst = 0;
+		columna_src = 0;
 
-		while ( columna_img_modificada < dstw )
+		while ( columna_dst < dstw-1 )
 		{
-			indice_img_modificada = 4*dstw*fila_img_modificada + 4*columna_img_modificada;
+			matrix_dst[fila_dst][columna_dst].a = matrix_src[fila_src][columna_src].a;
+			matrix_dst[fila_dst][columna_dst].b = matrix_src[fila_src][columna_src].b;
+			matrix_dst[fila_dst][columna_dst].g = matrix_src[fila_src][columna_src].g;
+			matrix_dst[fila_dst][columna_dst].r = matrix_src[fila_src][columna_src].r;
 
-			img_o_A = *(src + indice_img_original + A32);
-			img_o_B = *(src + indice_img_original + B32);
-			img_o_G = *(src + indice_img_original + G32);
-			img_o_R = *(src + indice_img_original + R32);
-
-			img_m_A = dst + indice_img_modificada + A32;
-			img_m_B = dst + indice_img_modificada + B32;
-			img_m_G = dst + indice_img_modificada + G32;
-			img_m_R = dst + indice_img_modificada + R32;
-
-			*img_m_A = img_o_A;
-			*img_m_B = img_o_B;
-			*img_m_G = img_o_G;
-			*img_m_R = img_o_R;
-
-			indice_img_original += 4;
-			columna_img_modificada += 2;
+			columna_dst += 2;
+			columna_src += 1;
 		}
 
-		fila_img_modificada += 2;
-	}
+		fila_dst += 2;
+		fila_src += 1;
+	}	
+}
+
+
+void agregoEntre2(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+{
+	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
 	uint8_t img_m_ant_A, img_m_ant_B, img_m_ant_G, img_m_ant_R,
 	        img_m_sig_A, img_m_sig_B, img_m_sig_G, img_m_sig_R;
 
-	// Ahora voy a agregar los pixeles que están entre dos de los originales (recorro filas)
+	uint32_t fila_dst;
+	uint32_t columna_dst;
 
-	uint32_t indice_img_modificada_anterior;
-	uint32_t indice_img_modificada_siguiente;
+	// Recorro columnas
+	fila_dst = 1;
 
-	fila_img_modificada = 1;
-
-	while ( fila_img_modificada < dsth )
+	while ( fila_dst < dsth )
 	{
-		columna_img_modificada = 1;
+		columna_dst = 1;
 
-		while ( columna_img_modificada < dstw-1 )
+		while ( columna_dst < dstw-1 )
 		{
-			indice_img_modificada = 4*dstw*fila_img_modificada + 4*columna_img_modificada;
-			indice_img_modificada_anterior = 4*dstw*fila_img_modificada + 4*(columna_img_modificada - 1);
-			indice_img_modificada_siguiente = 4*dstw*fila_img_modificada + 4*(columna_img_modificada + 1);
+			img_m_ant_A = matrix_dst[fila_dst][columna_dst-1].a;
+			img_m_ant_B = matrix_dst[fila_dst][columna_dst-1].b;
+			img_m_ant_G = matrix_dst[fila_dst][columna_dst-1].g;
+			img_m_ant_R = matrix_dst[fila_dst][columna_dst-1].r;
 
-			img_m_ant_A = *(dst + indice_img_modificada_anterior + A32);
-			img_m_ant_B = *(dst + indice_img_modificada_anterior + B32);
-			img_m_ant_G = *(dst + indice_img_modificada_anterior + G32);
-			img_m_ant_R = *(dst + indice_img_modificada_anterior + R32);
+			img_m_sig_A = matrix_dst[fila_dst][columna_dst+1].a;
+			img_m_sig_B = matrix_dst[fila_dst][columna_dst+1].b;
+			img_m_sig_G = matrix_dst[fila_dst][columna_dst+1].g;
+			img_m_sig_R = matrix_dst[fila_dst][columna_dst+1].r;
 
-			img_m_sig_A = *(dst + indice_img_modificada_siguiente + A32);
-			img_m_sig_B = *(dst + indice_img_modificada_siguiente + B32);
-			img_m_sig_G = *(dst + indice_img_modificada_siguiente + G32);
-			img_m_sig_R = *(dst + indice_img_modificada_siguiente + R32);
+			matrix_dst[fila_dst][columna_dst].a = fmax( img_m_ant_A , img_m_sig_A );
+			matrix_dst[fila_dst][columna_dst].b = fmax( fmin( ( img_m_ant_B + img_m_sig_B ) >> 1, 255), 0 );
+			matrix_dst[fila_dst][columna_dst].g = fmax( fmin( ( img_m_ant_G + img_m_sig_G ) >> 1, 255), 0 );
+			matrix_dst[fila_dst][columna_dst].r = fmax( fmin( ( img_m_ant_R + img_m_sig_R ) >> 1, 255), 0 );
 
-			img_m_A = dst + indice_img_modificada + A32;
-			img_m_B = dst + indice_img_modificada + B32;
-			img_m_G = dst + indice_img_modificada + G32;
-			img_m_R = dst + indice_img_modificada + R32;
-
-			// *img_m_A = fmax( fmin( ( img_m_ant_A + img_m_sig_A ) >> 2, 255), 0 );
-			*img_m_A = fmax( img_m_ant_A , img_m_sig_A );
-			*img_m_B = fmax( fmin( ( img_m_ant_B + img_m_sig_B ) >> 1, 255), 0 );
-			*img_m_G = fmax( fmin( ( img_m_ant_G + img_m_sig_G ) >> 1, 255), 0 );
-			*img_m_R = fmax( fmin( ( img_m_ant_R + img_m_sig_R ) >> 1, 255), 0 );
-
-			columna_img_modificada += 2;
+			columna_dst += 2;
 		}
 
-		fila_img_modificada += 2;
+		fila_dst += 2;
 	}
 
-	// Ahora voy a agregar los pixeles que están entre dos de los originales (recorro columnas)
+	// Recorro filas
+	columna_dst = 0;
 
-	columna_img_modificada = 0;
-
-	while ( columna_img_modificada < dstw-1 )
+	while ( columna_dst < dstw-1 )
 	{
-		fila_img_modificada = 2;
+		fila_dst = 2;
 
-		while ( fila_img_modificada < dsth )
+		while ( fila_dst < dsth )
 		{
-			indice_img_modificada = 4*dstw*fila_img_modificada + 4*columna_img_modificada;
-			indice_img_modificada_anterior = 4*dstw*(fila_img_modificada - 1) + 4*columna_img_modificada;
-			indice_img_modificada_siguiente = 4*dstw*(fila_img_modificada + 1) + 4*columna_img_modificada;
+			img_m_ant_A = matrix_dst[fila_dst-1][columna_dst].a;
+			img_m_ant_B = matrix_dst[fila_dst-1][columna_dst].b;
+			img_m_ant_G = matrix_dst[fila_dst-1][columna_dst].g;
+			img_m_ant_R = matrix_dst[fila_dst-1][columna_dst].r;
 
-			img_m_ant_A = *(dst + indice_img_modificada_anterior + A32);
-			img_m_ant_B = *(dst + indice_img_modificada_anterior + B32);
-			img_m_ant_G = *(dst + indice_img_modificada_anterior + G32);
-			img_m_ant_R = *(dst + indice_img_modificada_anterior + R32);
+			img_m_sig_A = matrix_dst[fila_dst+1][columna_dst].a;
+			img_m_sig_B = matrix_dst[fila_dst+1][columna_dst].b;
+			img_m_sig_G = matrix_dst[fila_dst+1][columna_dst].g;
+			img_m_sig_R = matrix_dst[fila_dst+1][columna_dst].r;
 
-			img_m_sig_A = *(dst + indice_img_modificada_siguiente + A32);
-			img_m_sig_B = *(dst + indice_img_modificada_siguiente + B32);
-			img_m_sig_G = *(dst + indice_img_modificada_siguiente + G32);
-			img_m_sig_R = *(dst + indice_img_modificada_siguiente + R32);
+			matrix_dst[fila_dst][columna_dst].a = fmax( img_m_ant_A , img_m_sig_A );
+			matrix_dst[fila_dst][columna_dst].b = fmax( fmin( ( img_m_ant_B + img_m_sig_B ) >> 1, 255), 0 );
+			matrix_dst[fila_dst][columna_dst].g = fmax( fmin( ( img_m_ant_G + img_m_sig_G ) >> 1, 255), 0 );
+			matrix_dst[fila_dst][columna_dst].r = fmax( fmin( ( img_m_ant_R + img_m_sig_R ) >> 1, 255), 0 );
 
-			img_m_A = dst + indice_img_modificada + A32;
-			img_m_B = dst + indice_img_modificada + B32;
-			img_m_G = dst + indice_img_modificada + G32;
-			img_m_R = dst + indice_img_modificada + R32;
-
-			//*img_m_A = fmax( fmin( ( img_m_ant_A + img_m_sig_A ) >> 2, 255), 0);
-			*img_m_A = fmax( img_m_ant_A , img_m_sig_A );
-			*img_m_B = fmax( fmin( ( img_m_ant_B + img_m_sig_B ) >> 1, 255), 0);
-			*img_m_G = fmax( fmin( ( img_m_ant_G + img_m_sig_G ) >> 1, 255), 0);
-			*img_m_R = fmax( fmin( ( img_m_ant_R + img_m_sig_R ) >> 1, 255), 0);
-
-			fila_img_modificada += 2;
+			fila_dst += 2;
 		}
 
-		columna_img_modificada += 2;
+		columna_dst += 2;
 	}
+}
 
-	// Agrego los pixeles que están entre cuatro de los originales
+
+void agregoEntre4(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+{
+	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
 	uint32_t img_m_arriba_izq_A, img_m_arriba_izq_B, img_m_arriba_izq_G, img_m_arriba_izq_R,
-	         img_m_arriba_der_A, img_m_arriba_der_B, img_m_arriba_der_G, img_m_arriba_der_R,
-	         img_m_abajo_izq_A,  img_m_abajo_izq_B,  img_m_abajo_izq_G,  img_m_abajo_izq_R,
-	         img_m_abajo_der_A,  img_m_abajo_der_B,  img_m_abajo_der_G,  img_m_abajo_der_R;
+	                             img_m_arriba_der_B, img_m_arriba_der_G, img_m_arriba_der_R,
+	                             img_m_abajo_izq_B,  img_m_abajo_izq_G,  img_m_abajo_izq_R,
+	                             img_m_abajo_der_B,  img_m_abajo_der_G,  img_m_abajo_der_R;
 
-	uint32_t indice_img_modificada_arriba_izq;
-	uint32_t indice_img_modificada_arriba_der;
-	uint32_t indice_img_modificada_abajo_izq;
-	uint32_t indice_img_modificada_abajo_der;
+	uint32_t fila_dst;
+	uint32_t columna_dst;
 
-	fila_img_modificada = 2;
+	fila_dst = 2;
 
-	while ( fila_img_modificada < dsth )
+	while ( fila_dst < dsth )
 	{
-		columna_img_modificada = 1;
+		columna_dst = 1;
 
-		while ( columna_img_modificada < dstw-1 )
+		while ( columna_dst < dstw-1 )
 		{
-			indice_img_modificada = 4*dstw*fila_img_modificada + 4*columna_img_modificada;
-			indice_img_modificada_arriba_izq = 4*dstw*(fila_img_modificada + 1) + 4*(columna_img_modificada - 1);
-			indice_img_modificada_arriba_der = 4*dstw*(fila_img_modificada + 1) + 4*(columna_img_modificada + 1);
-			indice_img_modificada_abajo_izq = 4*dstw*(fila_img_modificada - 1) + 4*(columna_img_modificada - 1);
-			indice_img_modificada_abajo_der = 4*dstw*(fila_img_modificada - 1) + 4*(columna_img_modificada + 1);
+			img_m_arriba_izq_A = matrix_dst[fila_dst+1][columna_dst-1].a;
+			img_m_arriba_izq_B = matrix_dst[fila_dst+1][columna_dst-1].b;
+			img_m_arriba_izq_G = matrix_dst[fila_dst+1][columna_dst-1].g;
+			img_m_arriba_izq_R = matrix_dst[fila_dst+1][columna_dst-1].r;
 
-			img_m_arriba_izq_A = *(dst + indice_img_modificada_arriba_izq + A32);
-			img_m_arriba_izq_B = *(dst + indice_img_modificada_arriba_izq + B32);
-			img_m_arriba_izq_G = *(dst + indice_img_modificada_arriba_izq + G32);
-			img_m_arriba_izq_R = *(dst + indice_img_modificada_arriba_izq + R32);
+			img_m_arriba_der_B = matrix_dst[fila_dst+1][columna_dst+1].b;
+			img_m_arriba_der_G = matrix_dst[fila_dst+1][columna_dst+1].g;
+			img_m_arriba_der_R = matrix_dst[fila_dst+1][columna_dst+1].r;
 
-			img_m_arriba_der_A = *(dst + indice_img_modificada_arriba_der + A32);
-			img_m_arriba_der_B = *(dst + indice_img_modificada_arriba_der + B32);
-			img_m_arriba_der_G = *(dst + indice_img_modificada_arriba_der + G32);
-			img_m_arriba_der_R = *(dst + indice_img_modificada_arriba_der + R32);
+			img_m_abajo_izq_B = matrix_dst[fila_dst-1][columna_dst-1].b;
+			img_m_abajo_izq_G = matrix_dst[fila_dst-1][columna_dst-1].g;
+			img_m_abajo_izq_R = matrix_dst[fila_dst-1][columna_dst-1].r;
 
-			img_m_abajo_izq_A = *(dst + indice_img_modificada_abajo_izq + A32);
-			img_m_abajo_izq_B = *(dst + indice_img_modificada_abajo_izq + B32);
-			img_m_abajo_izq_G = *(dst + indice_img_modificada_abajo_izq + G32);
-			img_m_abajo_izq_R = *(dst + indice_img_modificada_abajo_izq + R32);
+			img_m_abajo_der_B = matrix_dst[fila_dst-1][columna_dst+1].b;
+			img_m_abajo_der_G = matrix_dst[fila_dst-1][columna_dst+1].g;
+			img_m_abajo_der_R = matrix_dst[fila_dst-1][columna_dst+1].r;
 
-			img_m_abajo_der_A = *(dst + indice_img_modificada_abajo_der + A32);
-			img_m_abajo_der_B = *(dst + indice_img_modificada_abajo_der + B32);
-			img_m_abajo_der_G = *(dst + indice_img_modificada_abajo_der + G32);
-			img_m_abajo_der_R = *(dst + indice_img_modificada_abajo_der + R32);
+			matrix_dst[fila_dst][columna_dst].a =  img_m_arriba_izq_A;//fmax( fmax( ( img_m_arriba_izq_A, img_m_arriba_der_A ), img_m_abajo_izq_A ), img_m_abajo_der_A);
+			matrix_dst[fila_dst][columna_dst].b = fmax( fmin( ( img_m_arriba_izq_B + img_m_arriba_der_B + img_m_abajo_izq_B + img_m_abajo_der_B ) >> 2, 255), 0);
+			matrix_dst[fila_dst][columna_dst].g = fmax( fmin( ( img_m_arriba_izq_G + img_m_arriba_der_G + img_m_abajo_izq_G + img_m_abajo_der_G ) >> 2, 255), 0);
+			matrix_dst[fila_dst][columna_dst].r = fmax( fmin( ( img_m_arriba_izq_R + img_m_arriba_der_R + img_m_abajo_izq_R + img_m_abajo_der_R ) >> 2, 255), 0);
 
-			img_m_A = dst + indice_img_modificada + A32;
-			img_m_B = dst + indice_img_modificada + B32;
-			img_m_G = dst + indice_img_modificada + G32;
-			img_m_R = dst + indice_img_modificada + R32;
-
-			//*img_m_A = fmax( fmin( ( img_m_arriba_izq_A + img_m_arriba_der_A + img_m_abajo_izq_A + img_m_abajo_der_A ) >> 4, 255), 0);
-			*img_m_A =  img_m_arriba_izq_A;//fmax( fmax( ( img_m_arriba_izq_A, img_m_arriba_der_A ), img_m_abajo_izq_A ), img_m_abajo_der_A);
-			*img_m_B = fmax( fmin( ( img_m_arriba_izq_B + img_m_arriba_der_B + img_m_abajo_izq_B + img_m_abajo_der_B ) >> 2, 255), 0);
-			*img_m_G = fmax( fmin( ( img_m_arriba_izq_G + img_m_arriba_der_G + img_m_abajo_izq_G + img_m_abajo_der_G ) >> 2, 255), 0);
-			*img_m_R = fmax( fmin( ( img_m_arriba_izq_R + img_m_arriba_der_R + img_m_abajo_izq_R + img_m_abajo_der_R ) >> 2, 255), 0);
-
-			columna_img_modificada += 2;
+			columna_dst += 2;
 		}
 
-		fila_img_modificada += 2;
+		fila_dst += 2;
+	}
+}
+
+
+void agregoBordes(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+{
+	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
+
+	uint32_t fila_dst;
+	uint32_t columna_dst;
+
+	// Borde inferior
+
+	columna_dst = 0;
+
+	while ( columna_dst < dstw )
+	{
+		matrix_dst[0][columna_dst].a = matrix_dst[1][columna_dst].a;
+		matrix_dst[0][columna_dst].b = matrix_dst[1][columna_dst].b;
+		matrix_dst[0][columna_dst].g = matrix_dst[1][columna_dst].g;
+		matrix_dst[0][columna_dst].r = matrix_dst[1][columna_dst].r;
+
+		columna_dst += 1;
 	}
 
-	// Hago los bordes
+	// Borde derecho
 
-	/***********************************
-	        ESTO NO ANDAAAAAAAAAAA
-	************************************/
+	fila_dst = 1;
 
-	// uint32_t indice_img_modificada_arriba;
-	// uint32_t indice_img_modificada_izquierda;
+	while ( fila_dst < dsth )
+	{
+		matrix_dst[fila_dst][dstw-1].a = matrix_dst[fila_dst][dstw-2].a;
+		matrix_dst[fila_dst][dstw-1].b = matrix_dst[fila_dst][dstw-2].b;
+		matrix_dst[fila_dst][dstw-1].g = matrix_dst[fila_dst][dstw-2].g;
+		matrix_dst[fila_dst][dstw-1].r = matrix_dst[fila_dst][dstw-2].r;
 
-	// columna_img_modificada = 0;
-
-	// while ( columna_img_modificada < dstw )
-	// {
-	// 	indice_img_modificada = 4*columna_img_modificada;
-	// 	indice_img_modificada_arriba = 4*dstw + 4*columna_img_modificada; // Arriba del borde de abajo
-	// 	indice_img_modificada_izquierda = 4*dstw*dsth - 4*dstw*columna_img_modificada - 1; // A la izquierda del borde derecho
-
-	// 	img_m_ant_A = *(dst + indice_img_modificada_arriba + A32);
-	// 	img_m_ant_B = *(dst + indice_img_modificada_arriba + B32);
-	// 	img_m_ant_G = *(dst + indice_img_modificada_arriba + G32);
-	// 	img_m_ant_R = *(dst + indice_img_modificada_arriba + R32);
-
-	// 	img_m_sig_A = *(dst + indice_img_modificada_izquierda + A32);
-	// 	img_m_sig_B = *(dst + indice_img_modificada_izquierda + B32);
-	// 	img_m_sig_G = *(dst + indice_img_modificada_izquierda + G32);
-	// 	img_m_sig_R = *(dst + indice_img_modificada_izquierda + R32);
-
-	// 	if ( columna_img_modificada < dstw-1 )
-	// 	{
-	// 		indice_img_modificada = 4*dstw*dsth - 4*dstw*columna_img_modificada;
-
-	// 		img_m_A = dst + indice_img_modificada + A32;
-	// 		img_m_B = dst + indice_img_modificada + B32;
-	// 		img_m_G = dst + indice_img_modificada + G32;
-	// 		img_m_R = dst + indice_img_modificada + R32;
-
-	// 		// *img_m_A = fmax( fmin( ( img_m_ant_A + img_m_sig_A ) >> 2, 255), 0 );
-	// 		*img_m_A = img_m_ant_A,
-	// 		*img_m_B = fmax( fmin( img_m_ant_B, 255), 0 );
-	// 		*img_m_G = fmax( fmin( img_m_ant_G, 255), 0 );
-	// 		*img_m_R = fmax( fmin( img_m_ant_R, 255), 0 );
-	// 	}
+		fila_dst += 1;
+	}
+}
 
 
-	// 	img_m_A = dst + indice_img_modificada + A32;
-	// 	img_m_B = dst + indice_img_modificada + B32;
-	// 	img_m_G = dst + indice_img_modificada + G32;
-	// 	img_m_R = dst + indice_img_modificada + R32;
+void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
+                  uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+{
+	// Primero copio los pixeles que no se modifican
+	agregoIguales(src, srcw, srch, dst, dstw, dsth);
 
-	// 	// *img_m_A = fmax( fmin( ( img_m_ant_A + img_m_sig_A ) >> 2, 255), 0 );
-	// 	*img_m_A = img_m_ant_A,
-	// 	*img_m_B = fmax( fmin( img_m_sig_B, 255), 0 );
-	// 	*img_m_G = fmax( fmin( img_m_sig_G, 255), 0 );
-	// 	*img_m_R = fmax( fmin( img_m_sig_R, 255), 0 );
+	// Ahora voy a agregar los pixeles que están entre dos de los originales
+	agregoEntre2(dst, dstw, dsth);
 
+	// Agrego los pixeles que están entre cuatro de los originales
+	agregoEntre4(dst, dstw, dsth);
 
-	// 	columna_img_modificada += 1;
-	// }
-
+	// Agrego los bordes derecho e inferior
+	agregoBordes(dst, dstw, dsth);
 }
