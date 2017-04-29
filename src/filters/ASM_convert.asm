@@ -12,8 +12,9 @@ extern C_convertYUVtoRGB
 extern C_convertRGBtoYUV
 
 /**         ********    ATENCION!!     ********
-    Esta funcion esta siendo desarollada por Andres.
-    En otras palbras, la tocas y te cago a trompadas.
+    Esta funcion esta siendo desarrollada por Andres.
+    En otras palbras, la modificas y te cago a trompadas.
+    Puto el que lee
 **/
 
 ; rdi -> puntero src    (uint8_t)
