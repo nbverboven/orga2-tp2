@@ -35,8 +35,6 @@ void C_maxCloser(uint8_t* src, uint32_t srcw, uint32_t srch,
     int b, gH,gW, ph,pw, w,h;
     uint32_t k = 0;
 
-    //RGBA (*matrix_src)[srcw][srch] = RGBA (*)[srcw][srch] src;
-
     //RGBA (*matrix_src)[srcw] = RGBA (*)[srcw] src;
     //matrix_src[fila][col].g
 
