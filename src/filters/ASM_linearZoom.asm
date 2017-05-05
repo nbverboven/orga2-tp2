@@ -23,43 +23,47 @@ ASM_linearZoom:
 	push    r15
 	sub     rsp, 8
 
+	mov     rbx, rcx
+
 	shl     rsi, 8
 	shr     rsi, 8
 	shl     r8, 8
 	shr     r8, 8
 
-	mov     rbx, rcx
-	; xor     rcx, rcx
-	; lea     rcx, [r8 - 5] ; rcx <- srch = alto de la imagen original
+	lea     r8, [r8*4]
 
-	; lea     r12, [1] ; índice filas
-	lea     r14, [0]
-	lea     r13, [4*r8]
-	lea     r12, [0]
-	lea          rcx, [rsi-4]
+	lea     r12, [1] ; índice filas
+	lea     r13, [0] ; índice columnas
 
-	pxor         xmm8, xmm8 ; xmm8 <- [ 0 | 0 | 0 | 0 ]
+	pxor    xmm8, xmm8 ; xmm8 <- [ 0 | 0 | 0 | 0 ]
 
 ; n = número de filas de src
 ; .ciclo1:
 
-; 	lea     r13, [0] ; índice columnas
+
+
+	; Veo si ya terminé...
+
+	; cmp          rdi, rcx
+	; jge          .fin 
+
+	; lea          rdi, [rdi + 4*rsi]
+	lea          r15, [rdi + 4*rsi]
+
+	mov          r9, r8
+	sub          r9, 4
 
 
 .ciclo2:
-	; Veo si ya terminé...
 
-	cmp          r14, rcx
-	jge          .fin 
+	lea          rbx, [rbx + r8]
+	lea          r10, [rbx + r8]
 
-	; lea          r15, [r12 + r13]
-	lea          r15, [rdi + r13]
+	cmp          r13, r9
+	jg           .fin
 
-	; movdqu       xmm0, [rdi + offset_ARGB*(fila) + offset_ARGB*columna]   ; xmm0 <- [ src[n-1][0] | src[n-1][1] | src[n-1][2] | src[n-1][3] ]
-	; movdqu       xmm1, [rdi + offset_ARGB*(fila+1) + offset_ARGB*columna] ; xmm1 <- [ src[n-2][0] | src[n-2][1] | src[n-2][2] | src[n-2][3] ]
-
-	movdqu       xmm0, [rdi + 4*r12]   ; xmm0 <- [ src[n-1][0] | src[n-1][1] | src[n-1][2] | src[n-1][3] ]
-	movdqu       xmm1, [r15 + 4*r12] ; xmm1 <- [ src[n-2][0] | src[n-2][1] | src[n-2][2] | src[n-2][3] ]
+	movdqu       xmm0, [rdi + 4*r13]   ; xmm0 <- [ src[n-1][0] | src[n-1][1] | src[n-1][2] | src[n-1][3] ]
+	movdqu       xmm1, [r15 + 4*r13]   ; xmm1 <- [ src[n-2][0] | src[n-2][1] | src[n-2][2] | src[n-2][3] ]
 
 
 ; --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -111,7 +115,7 @@ ASM_linearZoom:
 	psrlw        xmm2, 1    ; xmm2 <- [ (src[n-1][0] + src[n-2][0])/2 | (src[n-1][1] + src[n-2][1])/2 ]
 
 	packuswb     xmm2, xmm8 ; xmm2 <- [ 0 | 0 | (src[n-1][0] + src[n-2][0])/2 | (src[n-1][1] + src[n-2][1])/2 ]
-
+;                                                     MUCHAS COSAS LOCAS PASAN EN ESTE LUGAR...
 ; --------------------------------------------------------------------------------------------------------------------------------------------------
 
 	; xmm5 <- [ src[n-1][0] + src[n-1][1] | src[n-1][1] + src[n-1][2] ]
@@ -204,21 +208,21 @@ ASM_linearZoom:
 	; xmm2 <- [ (src[n-1][0] + src[n-2][0])/2 | (src[n-1][0] + src[n-1][1] + src[n-2][0] + src[n-2][1])/4 | (src[n-1][1] + src[n-2][1])/2 | (src[n-1][1] + src[n-1][2] + src[n-2][1] + src[n-2][2])/4 ]
 	; xmm3 <- [ src[n-1][0] | (src[n-1][0] + src[n-1][1])/2 | src[n-1][1] | (src[n-1][1] + src[n-1][2])/2 ]
 
-	lea          r8, [r8*4]
-	add          rbx, r8
+	; lea          r8, [r8*4]
+	; add          rbx, r8
 	movdqu       [rbx], xmm3
-	add          rbx, r8
-	movdqu       [rbx], xmm2
-	add          rbx, r8
-	movdqu       [rbx], xmm5
+	; add          rbx, r8
+	movdqu       [r10], xmm2
+	; add          rbx, r8
+	; movdqu       [rbx + 2*r8], xmm5
 
 
 
 .fin_ciclo2:
 ; --------------------------------------------------------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------------------------------------------------------
-	add          r14, 2
-	add          r12, 2
+	; add          r14, 2
+	add          r13, 2
 	jmp          .ciclo2
 
 ; --------------------------------------------------------------------------------------------------------------------------------------------------
