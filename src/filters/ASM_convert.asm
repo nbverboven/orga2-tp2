@@ -1,5 +1,3 @@
-%define saturacion_max dw 255, 255, 255, 255
-%define saturacion_min dw 0, 0, 0, 0
 %define offset_ARGB 4
 %define offset_ARGB_A 0
 %define offset_ARGB_R 3
@@ -89,8 +87,9 @@ section .text
             mov rcx, rbx
             add rcx, 4
             ;copio A dado que sigue igual
-            mov al, [r12+rbx]
+            mov al, [r12+rbx]   ; copio A primer pixel
             mov [r13+rbx], al   ;A primer pixel
+            mov al, [r12+rcx]   ; copio A segundo pixel
             mov [r13+rcx], al   ;A segundo pixel
 
             ;calculo v
