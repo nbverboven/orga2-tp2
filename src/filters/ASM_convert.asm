@@ -12,9 +12,11 @@ extern C_convertYUVtoRGB
 extern C_convertRGBtoYUV
 
 section .rodata 
-    mask_Y: dw 0, 25, 129, 66, 0, 25, 129, 66
-    mask_U: dw 0, 112, -74, -38, 0, 112, -74, -38
-    mask_V: dw 0, -18, -94, 112, 0, -18, -94, 112
+    replaceAto1: dw 0,0,0,1, 0,0,0,1
+
+    mask_Y: dw 66, 129, 25, 128, 66, 129, 25, 128
+    mask_U: dw -38, -74, 112, 128, -38, -74, 112, 128
+    mask_V: dw 112, -94, -18, 128, 112, -94, -18, 128
 
     add_y: dd 16, 16, 16, 16
     add_u: dd 128, 128, 128, 128
@@ -67,7 +69,20 @@ section .text
             cmp rbx, r14    ;if rbx == srch*srcw*4
             je .fin         ; then jmp .fin
             
-            pmovzxbw xmm0, [r12+rbx]  ; xmm0 = [ pixel[1][1] | pixel[1][2] ]
+            pmovzxbw xmm0, [r12+rbx]    ; xmm0 = [ pixel[1][1] | pixel[1][2] ]
+            pmovzxbw xmm15, [r12+rbx]   ; xmm0 = [ pixel[1][1] | pixel[1][2] ]
+            ;Como los pixeles vienen ARGB los voy a convertir a BRG1 para calcular YUV
+            psrlq xmm0, 16             ; xmm0 << 16 (word)
+            psllq xmm15, 16            ; xmm15 >> 16 (word)
+            pblendw xmm0, xmm15, 0x88
+            psrlq xmm0, 16             ; xmm0 << 16 (word)
+            psllq xmm15, 16            ; xmm15 >> 16 (word)
+            pblendw xmm0, xmm15, 0x88
+            psrlq xmm0, 16             ; xmm0 << 16 (word)
+            movdqu xmm15, [replaceAto1]; xmm3 = [ 0 0 0 1 | 0 0 0 1 ]
+            pblendw xmm0, xmm15, 0x88  ; xmm0 = [ R G B 1 | R G B 1]
+            ; xmm0 = [  R   G   B   1  |  R   G   B   1  ]
+
             ; Estoy moviendo 2 pixeles,1 pixel = 4 bits (ARGB)
 
             ;uso rcx para operar con el segundo pixel
@@ -79,14 +94,15 @@ section .text
             mov [r13+rcx], al   ;A segundo pixel
 
             ;calculo v
-            movdqu xmm3, [mask_V]   ; xmm3 = [ 0 -18 -94 112 ]
-            pmaddwd xmm3, xmm0      ; xmm3 = [ (0*A+B*112) (-74)*G+R*(-38) ]
-            phaddd xmm3, xmm3       ; xmm3 = [ xxx xxx |  ((0*A+B*112)+(-74)*G+R*(-38))  ((0*A+B*112)+(-74)*G+R*(-38)) ]
+            movdqu xmm3, [mask_V]   ; xmm3 = [ 112 -94 -18 128 | 112 -94 -18 128 ]
+                                    ; xmm0 = [  R   G   B   1  |  R   G   B   1  ]
+            pmaddwd xmm3, xmm0      ; xmm3 = [ 112*R-94*G  -18*B+128 | 112*R-94*G  -18*B+128 ]
+            phaddd xmm3, xmm3       ; xmm3 = [ xxx xxx | (112*R-94*G-18*B+128) (112*R-94*G-18*B+128) ]
             psrld xmm3, 8           ; xmm3 >> 8 (dword)
             movdqu xmm11, [add_v]   ; xmm11 = [ 128 128 128 128 ]
             paddd xmm3, xmm11       ; xmm3 = [ ? ? (128+V) (128+V) ]
-            packssdw xmm3,xmm3      ; xmm3 = [ ? ? ? ? | ? ? V V ]
-            packsswb xmm3,xmm3      
+            packusdw xmm3,xmm3      ; xmm3 = [ ? ? ? ? | ? ? V V ]
+            packuswb xmm3,xmm3      ; xmm3 = [ ? ? ? ? ? ? ? ? | ? ? ? ? ? ? V V ]
             movq rax, xmm3
 
             inc rcx
@@ -97,14 +113,15 @@ section .text
 
 
             ;calculo U
-            movdqu xmm2, [mask_U]   ; xmm2 = [ 0 112 -74 -38 ]
-            pmaddwd xmm2, xmm0      ; xmm2 = [ (0*A+B*112) ((-74)*G+R*(-38)) ]
-            phaddd xmm2, xmm2       ; xmm2 = [ xxx xxx |  ((0*A+B*25)+(129*G+R*66))  ((0*A+B*25)+(129*G+R*66)) ]
+            movdqu xmm2, [mask_U]   ; xmm2 = [ -38 -74 112 128 ]
+                                    ; xmm0 = [  R   G   B   1  |  R   G   B   1  ]
+            pmaddwd xmm2, xmm0      ; xmm2 = [ -38*R-74*G 112*B+128 | -38*R-74*G 112*B+128 ]
+            phaddd xmm2, xmm2       ; xmm2 = [ xxx xxx |  (-38*R-74*G+112*B+128)  (-38*R-74*G+112*B+128) ]
             psrld xmm2, 8           ; xmm2 >> 8 (dword)
             movdqu xmm10, [add_u]   ; xmm10 = [ 128 128 128 128 ]
             paddd xmm2, xmm10       ; xmm2 = [ ? ? (128+Y) (128+U) ]
-            packssdw xmm2,xmm2      ; xmm2 = [ ? ? ? ? | ? ? U U ]
-            packsswb xmm2,xmm2      
+            packusdw xmm2,xmm2      ; xmm2 = [ ? ? ? ? | ? ? U U ]
+            packuswb xmm2,xmm2      ; xmm2 = [ ? ? ? ? ? ? ? ? | ? ? ? ? ? ? U U ]
             movq rax, xmm2
 
             inc rcx
@@ -115,15 +132,15 @@ section .text
             
 
             ;calculo Y
-            movdqu xmm1, [mask_Y]   ; xmm1 = [ 0 25 129 66 | 0 25 129 66 ]
-                                    ; xmm0 = [ A  B  G  R  | A  B  G  R  ]
-            pmaddwd xmm1, xmm0      ; xmm1 = [ (0*A+B*25) (129*G+R*66) | (0*A+B*25) (129*G+R*66) ]
-            phaddd xmm1, xmm1       ; xmm1 = [ xxx xxx |  ((0*A+B*25)+(129*G+R*66))  ((0*A+B*25)+(129*G+R*66)) ]
+            movdqu xmm1, [mask_Y]   ; xmm1 = [  66 129 25 128  |  66 129 25 128  ]
+                                    ; xmm0 = [  R   G   B   1  |  R   G   B   1  ]
+            pmaddwd xmm1, xmm0      ; xmm1 = [ 66*R+129*G 25*B+128 | 66*R+129*G 25*B+128 ]
+            phaddd xmm1, xmm1       ; xmm1 = [ xxx xxx |  (66*R+129*G+25*B+128)  (66*R+129*G+25*B+128) ]
             psrld xmm1, 8           ; xmm1 >> 8 (dword)
             movdqu xmm9, [add_y]    ; xmm9 = [ 16 16 16 16 ]
             paddd xmm1, xmm9        ; xmm1 = [ ? ? (16+Y) (16+Y) ]
-            packssdw xmm1,xmm1      ; xmm1 = [ ? ? ? ? | ? ? Y Y ]
-            packsswb xmm1,xmm1      
+            packusdw xmm1,xmm1      ; xmm1 = [ ? ? ? ? | ? ? Y Y ]
+            packuswb xmm1,xmm1      ; xmm1 = [ ? ? ? ? ? ? ? ? | ? ? ? ? ? ? Y Y ]
             movq rax, xmm1
 
             inc rcx
@@ -132,10 +149,7 @@ section .text
             mov al, ah
             mov [r13+rcx], al
 
-            ;seteo YUV
-            ;movq [r13+rbx], xmm0
-
-            ;add rbx, 8   ; rbx += 8 (porque son 2 pixeles, 4bits x pixel)
+            ; incremento rcx para que pase al nuevo pixel
             inc rcx
             mov rbx, rcx
             jmp .ciclo
