@@ -35,6 +35,7 @@ ASM_fourCombine:
         add rdi, rdi	;rdi= srcw*srch*2. Es la mitad de la cantidad total de bytes de la imagen
         mov r15, rdi
         add r15, r15    ;r15= srcw*srch*4. Es la cantidad de bytes de la imagen
+        sub r15, r14	;r15= srcw*srch*4. Porque avanzo de a dos filas a la vez
 
         xor rbx, rbx
         xor r9, r9

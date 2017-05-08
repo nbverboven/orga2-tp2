@@ -15,13 +15,11 @@ ASM_maxCloser:
 
 section .rodata
 
-	pasaR: db 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff 
-	pasaG: db 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00
-	pasaB: db 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00
-	pasaA: db 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00
-
-	soloRGB: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff
-	soloA: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00
+	pasaR: dd 0xff000000, 0xff000000, 0xff000000, 0xff000000
+	pasaG: dd 0x00ff0000, 0x00ff0000, 0x00ff0000, 0x00ff0000
+	pasaB: dd 0x0000ff00, 0x0000ff00, 0x0000ff00, 0x0000ff00
+	pasaA: dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff  
+	pasaBGR: dd 0xffffff00, 0x00000000, 0x00000000, 0x00000000
 
 section .text
 
@@ -51,19 +49,19 @@ section .text
         mul edi         
         add rax, rax	
         mov r15, rax
-        add r15, r15    ;r15= srcw*srch*4. Es la cantidad de bytes de la imagen
+        add r15, r15    			;r15= srcw*srch*4. Es la cantidad de bytes de la imagen
 
         xorps xmm9, xmm9
-        xor eax, eax
-        inc eax
-        cvtsi2ss xmm9, eax
-        subps xmm9, xmm0	;xmm9= [---- | ---- | ---- | 1-Val]
+        xor esi, esi
+        inc esi
+        cvtsi2ss xmm9, esi
+        subps xmm9, xmm0			;xmm9= [---- | ---- | ---- | 1-Val]
         pshufd xmm9, xmm9, 0x00
 
         xor rsi, rsi
-        xor r9, r9		;Indice de fila
-        xor rcx, rcx	;Indice de columna
-        xor rbx, rbx	;Indice que se mueve por la imagen entera
+        xor r9, r9					
+        xor rcx, rcx				
+        xor rbx, rbx				;Indice que se mueve por la imagen entera
         xorps xmm5, xmm5
         xorps xmm6, xmm6
         xorps xmm7, xmm7
@@ -95,40 +93,42 @@ section .text
     	pop rax
     	pop rax
 
-    	movdqu xmm1, xmm8
-    	movdqu xmm2, xmm8
-    	movdqu xmm3, xmm8
+    	movdqu xmm1, xmm7
+    	movdqu xmm2, xmm7
+    	movdqu xmm3, xmm7
     	psrldq xmm1, 12
     	psrldq xmm2, 8
     	psrldq xmm3, 4
-    	maxps xmm1, xmm8
-    	maxps xmm1, xmm2
-    	maxps xmm1, xmm3 		;xmm1= [---- | ---- | ---- | maxPixelKernel]
-    	
-    	punpcklbw xmm1, xmm1
-    	punpcklwd xmm1, xmm1	;xmm1= [A | B | G | R]
-    	cvtdq2ps xmm1, xmm1
-    	mulps xmm1, xmm0 		;xmm1= [---- | Val*maxB | Val*maxG | Val*maxR]
+    	pmaxub xmm7, xmm1
+    	pmaxub xmm7, xmm2
+    	pmaxub xmm7, xmm3		;xmm7= [---- | ---- | ---- | maxABGR]
+
+    	xorps xmm3, xmm3
+    	punpcklbw xmm7, xmm3
+    	punpcklwd xmm7, xmm3	;xmm7= [---- | maxB | maxG | maxR]
+    	cvtdq2ps xmm7, xmm7
+    	mulps xmm7, xmm0 		;xmm7= [---- | Val*maxB | Val*maxG | Val*maxR]
 
     	xorps xmm2, xmm2
     	movd xmm2, [r12+rbx]
-    	punpcklbw xmm2, xmm2
-    	punpcklwd xmm2, xmm2	;xmm2= [A | B | G | R]
+    	xorps xmm3, xmm3
+    	punpcklbw xmm2, xmm3
+    	punpcklwd xmm2, xmm3	;xmm2= [A | B | G | R]
     	cvtdq2ps xmm2, xmm2
     	mulps xmm2, xmm9		;xmm2= [---- | (1-Val)*B | (1-Val)*G | (1-Val)*R]
 
-    	addps xmm1, xmm2 		;xmm1= [---- | (1-Val)*B+Val*maxB | (1-Val)*G+Val*maxG | (1-Val)*R+Val*maxR]
+    	addps xmm7, xmm2 		;xmm7= [---- | (1-Val)*B+Val*maxB | (1-Val)*G+Val*maxG | (1-Val)*R+Val*maxR]
 
-    	cvtps2dq xmm1, xmm1
-    	packusdw xmm1, xmm1
-    	packuswb xmm1, xmm1
+    	cvtps2dq xmm7, xmm7
+    	packusdw xmm7, xmm7
+    	packuswb xmm7, xmm7
 
     	xorps xmm2, xmm2
-    	movd xmm2, [r12+rbx]
-    	pand xmm2, [soloA]
-    	pand xmm1, [soloRGB]
-    	por xmm1, xmm2 			;Le agrego al pixel obtenido la componente A que se mantiene siempre igual
-    	movd [r13+rbx], xmm1
+    	movd xmm2, [r12+rbx]	;xmm2= [0000 | 0000 | 0000 | ABGR]
+    	pand xmm2, [pasaA]		;xmm2= [0000 | 0000 | 0000 | A000]
+    	pand xmm7, [pasaBGR] 	;xmm7= [0000 | 0000 | 0000 | 0 nuevoB nuevoG nuevoR]
+    	por xmm7, xmm2 			;xmm7= [0000 | 0000 | 0000 | A nuevoB nuevoG nuevoR]
+    	movd [r13+rbx], xmm7
 
     	add rbx, tamanio_pixel
     	inc rcx
@@ -157,7 +157,7 @@ section .text
 
     	xor rax, rax
     	mov rax, [rsp+16]
-    	mul r8
+    	imul r8
     	add rax, [rsp+8]
     	add rax, rbx
     	movdqu xmm1, [r12+rax]	;xmm1=[kernel[1][1] | kernel[1][2] | [kernel[1][3] | kernel[1][4]]
@@ -166,31 +166,8 @@ section .text
     	add rax, [rsp]
     	movdqu xmm2, [r12+rax]	;xmm2= [kernel[1][4] | kernel[1][5] | [kernel[1][6] | kernel[1][7]] Esto puede variar
     	
-    	movdqu xmm3, xmm1
-    	movdqu xmm4, xmm2
-    	pand xmm3, [pasaR]	
-    	pand xmm4, [pasaR] 	
-    	maxps xmm5, xmm3
-    	maxps xmm5, xmm4							;xmm5= [maxFila_R | maxFila_R | maxFila_R | maxFila_R]
-
-    	movdqu xmm3, xmm1
-    	movdqu xmm4, xmm2
-    	pand xmm3, [pasaG]
-    	pand xmm4, [pasaG]
-    	maxps xmm6, xmm3
-    	maxps xmm6, xmm4							;xmm6= [maxFila_G | maxFila_G | maxFila_G | maxFila_G]
-
-    	movdqu xmm3, xmm1
-    	movdqu xmm4, xmm2
-    	pand xmm3, [pasaB]
-    	pand xmm4, [pasaB]
-    	maxps xmm7, xmm3
-    	maxps xmm7, xmm4							;xmm7= [maxFila_B | maxFila_B | maxFila_B | maxFila_B]
-
-    	por xmm5, xmm6
-    	por xmm5, xmm7								;Vuelvo a armar los pixeles (sin la componente A)
-
-    	maxps xmm8, xmm5							;[maxKernel | maxKernel | maxKernel | maxKernel]
+    	pmaxub xmm7, xmm1
+    	pmaxub xmm7, xmm2		;xmm7= [maxABGR | maxABGR |maxABGR |maxABGR]
 
     	cmp qword[rsp+16], 0
     	jge .actualizarFila
@@ -232,11 +209,15 @@ get_in_range:
 
 		xor r12, r12
 		xor rax, rax
-		add r12, 3
+		inc r12
+		inc r12
+		inc r12
 
 		cmp rdi, r12
 		jl .borde
-		mov rax, -3
+		dec rax
+		dec rax
+		dec rax
 		jmp .fin
 
 	.borde:
@@ -258,7 +239,9 @@ get_in_range2:
 		push r12
 
 		xor r12, r12
-		add r12, 3
+		inc r12
+		inc r12
+		inc r12
 		sub rsi, rdi
 		cmp rsi, r12
 		jle .borde

@@ -88,6 +88,7 @@ void C_maxCloser(uint8_t* src, uint32_t srcw, uint32_t srch,
             *_B = fmax(fmin( B*(1.0-val) + maxB*val ,255),0);
 
             k += 4;
+            //printf("%d, %d, %d, %d \n", A, maxB, maxG, maxR);break;
     }    
 
 }
