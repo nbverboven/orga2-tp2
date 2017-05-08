@@ -73,24 +73,21 @@ section .text
     ; rcx: Indice de columna global 							;
     ; r8: Tamanio de la fila en bytes							;
     ; r9: Indice de fila global									;
-    ; r11: Tamanio fila en pixeles								;
+    ; r11: srcw													;
     ; r12: Puntero a src										;
     ; r13: Puntero a dst										;
     ; r14: Marca el final de la fila 							;
-    ; rsp: Resultado de get_in_range2							;
-    ; rsp+8: Resultado de get_in_range columna 					;
-    ; rsp+16: Resultado de get_in_range fila					;
-    ; rsp+24: srch												;
+    ; rsp: srch													;
     ; xmm8: Guarda los 4 pixeles mas grandes de un kernel		;
     ;-----------------------------------------------------------;
-    	push r9
-    	push r9
-    	push r9
+
+    	mov rax, -3
+    	push rax
+
         jmp .buscoMaximo
 
     .ciclo:
-    	pop rax
-    	pop rax
+
     	pop rax
 
     	movdqu xmm1, xmm7
@@ -142,46 +139,49 @@ section .text
     .mirarBordes:
     	movdqu xmm7, [blanco]	
     	mov rdi, r9
-    	call get_in_range 			;Miro el borde de arriba
-    	cmp rax, -3
-    	jg .pintoBlanco
-    	push rax
+    	call in_range 			;Miro el borde de arriba
+    	cmp rax, 0
+    	je .pintoBlanco
     	
     	mov rdi, rcx
-    	call get_in_range 			;Miro el borde izquierdo
-    	cmp rax, -3
-    	jg .pintoBlancoA
-    	add rax, rax
-    	add rax, rax
-    	push rax
+    	call in_range 			;Miro el borde izquierdo
+    	cmp rax, 0
+    	je .pintoBlanco
 
     	mov rdi, rcx
     	mov rsi, r11
-    	call get_in_range2			;Miro el borde derecho
+    	call in_range2			;Miro el borde derecho
     	cmp rax, 0
-    	jl .pintoBlancoB
+    	je .pintoBlanco
+
+    	mov rdi, r9					;Miro el borde de abajo
+    	mov rsi, [rsp]
+    	call in_range2
+    	cmp rax, 0
+    	je .pintoBlanco
+
+    	mov rax, -3
     	push rax
     
     .buscoMaximo:
 
-    	xor rax, rax
     	xorps xmm7, xmm7
-    	mov rax, [rsp+16]
-    	imul r8
-    	add rax, [rsp+8]
-    	add rax, rbx
-    	movdqu xmm1, [r12+rax]	;xmm1=[kernel[1][1] | kernel[1][2] | [kernel[1][3] | kernel[1][4]]
-    	sub rax, [rsp+8]			
 
-    	add rax, [rsp]
+    	mov rax, [rsp]
+    	imul r8
+    	sub rax, 12
+    	add rax, rbx
+    	movdqu xmm1, [r12+rax]	;xmm1=[kernel[1][1] | kernel[1][2] | [kernel[1][3] | kernel[1][4]]			
+
+    	add rax, 12
     	movdqu xmm2, [r12+rax]	;xmm2= [kernel[1][4] | kernel[1][5] | [kernel[1][6] | kernel[1][7]] Esto puede variar
     	
     	pmaxub xmm7, xmm1
     	pmaxub xmm7, xmm2		;xmm7= [maxABGR | maxABGR |maxABGR |maxABGR]
 
-    	cmp qword[rsp+16], 0
-    	jge .actualizarFila
-    	inc qword[rsp+16]
+    	cmp qword[rsp], 3
+    	je .ciclo
+    	inc qword[rsp]
     	jmp .buscoMaximo
 
     .actualizarFilaYColumnaGlobal:
@@ -189,33 +189,6 @@ section .text
     	inc r9
     	xor rcx, rcx
     	jmp .mirarBordes
-
-    .actualizarFila:
-    	cmp qword[rsp+16], 3
-    	je .ciclo				;Si llegue a 3 termine de recorrer todas las filas del kernel y vuelvo al ciclo
-    	inc qword[rsp+16]
-    	mov rax, [rsp+24]
-    	sub rax, [rsp+16]
-    	sub rax, r9
-    	cmp rax, 0
-    	jle .pintoBlancoC
-    	jmp .buscoMaximo
-
-    .pintoBlancoA:
-    	pop rax
-    	jmp .pintoBlanco
-
-    .pintoBlancoB:
-    	pop rax
-    	pop rax
-    	jmp .pintoBlanco
-
-    .pintoBlancoC:
-    	movdqu xmm7, [blanco]
-    	pop rax
-    	pop rax
-    	pop rax
-    	jmp .pintoBlanco
 
     .fin:
     	pop rax
@@ -228,28 +201,22 @@ section .text
 
 ret
 
-global get_in_range
-get_in_range:
+global in_range
+in_range:
 
 		push r12
 
 		xor r12, r12
 		xor rax, rax
-		inc r12
-		inc r12
-		inc r12
+		add r12, 3
 
 		cmp rdi, r12
 		jl .borde
-		dec rax
-		dec rax
-		dec rax
+		mov rax, 1
 		jmp .fin
 
 	.borde:
-		mov rax, rdi
-		sub rax, rdi
-		sub rax, rdi
+		mov rax, 0
 
 	.fin:
 		pop r12
@@ -259,26 +226,21 @@ get_in_range:
 
 ret
 
-global get_in_range2
-get_in_range2:
+global in_range2
+in_range2:
 
 		push r12
 
 		xor r12, r12
-		inc r12
-		inc r12
-		inc r12
+		add r12, 3
 		sub rsi, rdi
 		cmp rsi, r12
 		jle .borde
-		mov rax, 0
+		mov rax, 1
 		jmp .fin
 
 	.borde:		
-		sub rsi, 4
-		add rsi, rsi
-		add rsi, rsi
-		mov rax, rsi
+		mov rax, 0
 
 	.fin:
 		pop r12 
