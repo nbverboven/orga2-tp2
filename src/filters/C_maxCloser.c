@@ -30,7 +30,7 @@ void C_maxCloser(uint8_t* src, uint32_t srcw, uint32_t srch,
                  uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)), float val) {
     
 	uint8_t *A, B, G, R, *_B, *_G, *_R; 
-	float maxR, maxG, maxB;
+	double maxR, maxG, maxB;
 
     int b, gH,gW, ph,pw;
     uint32_t k = 0;
