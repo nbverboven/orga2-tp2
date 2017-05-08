@@ -8,6 +8,24 @@
 #include "filters.h"
 #include <math.h>
 
+int inRange(int w, int h, uint32_t srcw, uint32_t srch){
+
+    int ret;
+
+    if(w < 3 || h < 3){
+
+        ret = 0;
+    }else{
+            w = srcw - w;
+            h = srch - h;
+
+            if(w < 4 || h < 4){ret = 0;}else{ret = 1;}
+
+        }
+
+        return ret;
+}
+
 int getInRange(int p, int g , uint32_t dst){
     int ret;
 
@@ -57,6 +75,8 @@ void C_maxCloser(uint8_t* src, uint32_t srcw, uint32_t srch,
             maxG = 0.0;
             maxB = 0.0;
 
+        if(inRange(gW, gH, srcw, srch) == 1){
+
             while( ph<7 ){
 
                 pw = 0;
@@ -87,6 +107,19 @@ void C_maxCloser(uint8_t* src, uint32_t srcw, uint32_t srch,
             *_G = fmax(fmin( G*(1.0-val) + maxG*val ,255),0);
             *_B = fmax(fmin( B*(1.0-val) + maxB*val ,255),0);
 
+        }else{
+
+            A = dst+k;
+            _R = dst+k+3;
+            _G = dst+k+2;
+            _B = dst+k+1;
+
+            *A = 255; 
+            *_R = 255;
+            *_G = 255;
+            *_B = 255;
+
+        }
             k += 4;
             //printf("%d, %d, %d, %d \n", A, maxB, maxG, maxR);break;
     }    

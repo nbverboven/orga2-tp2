@@ -20,6 +20,7 @@ section .rodata
 	pasaB: dd 0x0000ff00, 0x0000ff00, 0x0000ff00, 0x0000ff00
 	pasaA: dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff  
 	pasaBGR: dd 0xffffff00, 0x00000000, 0x00000000, 0x00000000
+	blanco: dd 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 
 section .text
 
@@ -64,7 +65,6 @@ section .text
         xor rbx, rbx				;Indice que se mueve por la imagen entera
         xorps xmm5, xmm5
         xorps xmm6, xmm6
-        xorps xmm7, xmm7
         xorps xmm8, xmm8
 
     ;-----------------------------------------------------------;
@@ -128,6 +128,8 @@ section .text
     	pand xmm2, [pasaA]		;xmm2= [0000 | 0000 | 0000 | A000]
     	pand xmm7, [pasaBGR] 	;xmm7= [0000 | 0000 | 0000 | 0 nuevoB nuevoG nuevoR]
     	por xmm7, xmm2 			;xmm7= [0000 | 0000 | 0000 | A nuevoB nuevoG nuevoR]
+
+    .pintoBlanco:
     	movd [r13+rbx], xmm7
 
     	add rbx, tamanio_pixel
@@ -137,13 +139,18 @@ section .text
     	cmp rbx, r14
     	je .actualizarFilaYColumnaGlobal
 
-    .mirarBordes:	
+    .mirarBordes:
+    	movdqu xmm7, [blanco]	
     	mov rdi, r9
     	call get_in_range 			;Miro el borde de arriba
+    	cmp rax, -3
+    	jg .pintoBlanco
     	push rax
     	
     	mov rdi, rcx
     	call get_in_range 			;Miro el borde izquierdo
+    	cmp rax, -3
+    	jg .pintoBlancoA
     	add rax, rax
     	add rax, rax
     	push rax
@@ -151,11 +158,14 @@ section .text
     	mov rdi, rcx
     	mov rsi, r11
     	call get_in_range2			;Miro el borde derecho
+    	cmp rax, 0
+    	jl .pintoBlancoB
     	push rax
     
     .buscoMaximo:
 
     	xor rax, rax
+    	xorps xmm7, xmm7
     	mov rax, [rsp+16]
     	imul r8
     	add rax, [rsp+8]
@@ -188,8 +198,24 @@ section .text
     	sub rax, [rsp+16]
     	sub rax, r9
     	cmp rax, 0
-    	jle .ciclo
+    	jle .pintoBlancoC
     	jmp .buscoMaximo
+
+    .pintoBlancoA:
+    	pop rax
+    	jmp .pintoBlanco
+
+    .pintoBlancoB:
+    	pop rax
+    	pop rax
+    	jmp .pintoBlanco
+
+    .pintoBlancoC:
+    	movdqu xmm7, [blanco]
+    	pop rax
+    	pop rax
+    	pop rax
+    	jmp .pintoBlanco
 
     .fin:
     	pop rax
