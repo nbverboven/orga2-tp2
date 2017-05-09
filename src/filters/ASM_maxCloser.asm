@@ -174,7 +174,7 @@ section .text
     	movdqu xmm1, [r12+rax]	;xmm1=[kernel[1][1] | kernel[1][2] | [kernel[1][3] | kernel[1][4]]			
 
     	add rax, 12
-    	movdqu xmm2, [r12+rax]	;xmm2= [kernel[1][4] | kernel[1][5] | [kernel[1][6] | kernel[1][7]] Esto puede variar
+    	movdqu xmm2, [r12+rax]	;xmm2= [kernel[1][4] | kernel[1][5] | [kernel[1][6] | kernel[1][7]]
     	
     	pmaxub xmm7, xmm1
     	pmaxub xmm7, xmm2		;xmm7= [maxABGR | maxABGR |maxABGR |maxABGR]
@@ -221,9 +221,6 @@ in_range:
 	.fin:
 		pop r12
 
-;Devuelve cuantas filas hacia arriba se puede empezar el kernel. Ej: Si estoy en la fila 7 devolveria -3, mientras que si estoy en la fila 0 devolveria 0, o si estoy en la 1 devolveria -1.
-;Pasa exactamente lo mismo con las columnas. Se fija que tan a la izquierda puede ir.
-
 ret
 
 global in_range2
@@ -244,7 +241,5 @@ in_range2:
 
 	.fin:
 		pop r12 
-
-;Me dice que tan a la derecha puedo ir. Devuelve un numero tal que si estoy al final de la fila no se carguen valores de la siguiente fila (fila global) en el xmm. Ej: si el ancho de la imagen es 16 y estoy en el pixel 11 devolveria 0, ya que puedo cargar el actual y los tres que siguen. Si en cambio estoy en el pixel 15 (que es el ultimo ya que empiezo a contar desde cero), devolveria -3*4 y de esta manera volveria a cargar las posiciones -3, -2, -1 y 0 en el registro xmm. Si estuviese en el pixel 14 devolveria -2*4, etc.
 
 ret
