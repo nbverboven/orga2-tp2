@@ -1,7 +1,7 @@
 /* ************************************************************************* */
 /* Organizacion del Computador II                                            */
 /*                                                                           */
-/*   Implementacion de la funcion Zoom                                       */
+/*   Implementacion de la funcion maxCloser                                  */
 /*                                                                           */
 /* ************************************************************************* */
 
@@ -19,7 +19,8 @@ int inRange(int w, int h, uint32_t srcw, uint32_t srch){
             w = srcw - w;
             h = srch - h;
 
-            if(w < 4 || h < 4){ret = 0;}else{ret = 1;}
+            //if(w < 4 || h < 4){ret = 0;}else{ret = 1;}
+            ret = !( w < 4 || h < 4 ); // Dado que la comparación devuelve 1 si es True y 0 en el caso contrario, esto tiene sentido
 
         }
 
