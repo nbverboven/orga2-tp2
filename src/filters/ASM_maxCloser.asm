@@ -108,7 +108,6 @@ section .text
 
     	xorps xmm2, xmm2
     	movd xmm2, [r12+rbx]
-    	xorps xmm3, xmm3
     	punpcklbw xmm2, xmm3
     	punpcklwd xmm2, xmm3	;xmm2= [A | B | G | R]
     	cvtdq2ps xmm2, xmm2
@@ -117,10 +116,9 @@ section .text
     	addps xmm7, xmm2 		;xmm7= [---- | (1-Val)*B+Val*maxB | (1-Val)*G+Val*maxG | (1-Val)*R+Val*maxR]
 
     	cvtps2dq xmm7, xmm7
-    	packusdw xmm7, xmm7
-    	packuswb xmm7, xmm7
+    	packusdw xmm7, xmm3
+    	packuswb xmm7, xmm3
 
-    	xorps xmm2, xmm2
     	movd xmm2, [r12+rbx]	;xmm2= [0000 | 0000 | 0000 | ABGR]
     	pand xmm2, [pasaA]		;xmm2= [0000 | 0000 | 0000 | A000]
     	pand xmm7, [pasaBGR] 	;xmm7= [0000 | 0000 | 0000 | 0 nuevoB nuevoG nuevoR]

@@ -29,77 +29,64 @@ int inRange(int w, int h, uint32_t srcw, uint32_t srch){
 void C_maxCloser(uint8_t* src, uint32_t srcw, uint32_t srch,
                  uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)), float val) {
     
-	uint8_t *A, B, G, R, *_B, *_G, *_R; 
 	double maxR, maxG, maxB;
 
-    int b, gH,gW, ph,pw;
-    uint32_t k = 0;
+    int gH,gW, ph,pw;
 
-    //RGBA (*matrix_src)[srcw] = RGBA (*)[srcw] src;
-    //matrix_src[fila][col].g
+    RGBA (*matrix_src)[srcw] = (RGBA (*)[srcw]) src;
+    RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
-    //while(k < 4*((srch+1)*srcw+1)){
-    while(k < 4*srch*srcw){
-
-            R = *(src+k+3);
-            G = *(src+k+2);
-            B = *(src+k+1);
-
+     gH=0;
+    while(gH < srch){
+         gW=0;
+        while(gW < srcw){
             /** calculo el max **/
-
-            b = k / 4;      //bytes
-            gH = b / dstw;  //global height
-            gW = b % dstw;  //global width
-            ph = -3;
-
             maxR = 0.0;
             maxG = 0.0;
             maxB = 0.0;
 
-        if(inRange(gW, gH, srcw, srch) == 1){
+            if(inRange(gW, gH, srcw, srch) == 1){
 
-            while( ph<4 ){
+                ph = -3;
+                while( ph<4 ){
 
-                pw = -3;
-                while( pw<4 ){
+                    pw = -3;
+                    while( pw<4 ){
 
-                    maxR = fmax( *(src+(k+3+4*(pw+ph*srcw))), maxR );
-                    maxG = fmax( *(src+(k+2+4*(pw+ph*srcw))), maxG );
-                    maxB = fmax( *(src+(k+1+4*(pw+ph*srcw))), maxB );
-                    
-                    pw++;
+                        maxR = fmax( matrix_src[gH+ph][gW+pw].r ,maxR);
+                        maxG = fmax( matrix_src[gH+ph][gW+pw].g ,maxG);
+                        maxB = fmax( matrix_src[gH+ph][gW+pw].b ,maxB);
+
+                        pw++;
+                    }//END While
+
+                    ph++;
                 }//END While
 
-                ph++;
-            }//END While
+                /** fin calculo el max **/
 
-            /** fin calculo el max **/
+                matrix_dst[gH][gW].a = matrix_src[gH][gW].a; // La componente A se mantiene igual
+                matrix_dst[gH][gW].r = matrix_src[gH][gW].r*(1.0-val) + maxR*val;
+                matrix_dst[gH][gW].g = matrix_src[gH][gW].g*(1.0-val) + maxG*val;
+                matrix_dst[gH][gW].b = matrix_src[gH][gW].b*(1.0-val) + maxB*val;
 
-            A = dst+k;
-            _R = dst+k+3;
-            _G = dst+k+2;
-            _B = dst+k+1;
+            }else{
 
-            *A = *(src+k); // La componente A se mantiene igual
-            *_R = fmax(fmin( R*(1.0-val) + maxR*val ,255),0);
-            *_G = fmax(fmin( G*(1.0-val) + maxG*val ,255),0);
-            *_B = fmax(fmin( B*(1.0-val) + maxB*val ,255),0);
+                matrix_dst[gH][gW].a = matrix_src[gH][gW].a; // La componente A se mantiene igual
+                matrix_dst[gH][gW].r = 255;
+                matrix_dst[gH][gW].g = 255;
+                matrix_dst[gH][gW].b = 255;
 
-        }else{
+            }
+    
 
-            A = dst+k;
-            _R = dst+k+3;
-            _G = dst+k+2;
-            _B = dst+k+1;
-
-            *A = 255; 
-            *_R = 255;
-            *_G = 255;
-            *_B = 255;
-
+            gW++;
         }
-            k += 4;
-    }    
+
+        gH++;
+    }
+
+   
 
 }
 
