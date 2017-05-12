@@ -8,8 +8,8 @@
 #include "filters.h"
 #include <math.h>
 
-void agregoIguales(uint8_t* src, uint32_t srcw, uint32_t srch,
-                   uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+void agregoIguales(uint8_t* src, uint32_t srcw, uint32_t srch __attribute__((unused)),
+                   uint8_t* dst, uint32_t dstw, uint32_t dsth)
 {
 	RGBA (*matrix_src)[srcw] = (RGBA (*)[srcw]) src;
 	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
@@ -42,7 +42,7 @@ void agregoIguales(uint8_t* src, uint32_t srcw, uint32_t srch,
 }
 
 
-void agregoEntre2(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+void agregoEntre2(uint8_t* dst, uint32_t dstw, uint32_t dsth)
 {
 	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
@@ -114,7 +114,7 @@ void agregoEntre2(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unus
 }
 
 
-void agregoEntre4(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+void agregoEntre4(uint8_t* dst, uint32_t dstw, uint32_t dsth)
 {
 	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
@@ -164,7 +164,7 @@ void agregoEntre4(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unus
 }
 
 
-void agregoBordes(uint8_t* dst, uint32_t dstw, uint32_t dsth __attribute__((unused)))
+void agregoBordes(uint8_t* dst, uint32_t dstw, uint32_t dsth)
 {
 	RGBA (*matrix_dst)[dstw] = (RGBA (*)[dstw]) dst;
 
