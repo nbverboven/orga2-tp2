@@ -121,7 +121,6 @@ ASM_linearZoom:
 
 	.empiezo_con_los_bordes:
 		lea          rbx, [rdi + 4*rsi - 8] ; rbx <- &src[srch-1][srcw-2]
-		; lea          rbx, [rdi + 4*rsi - 16] ; rbx <- &src[srch-1][srcw-4]
 		lea          r13, [rcx + 8*r8 - 16]
 		lea          r13, [r13 + 4*r8]      ; rcx <- &dst[dsth-3][dstw-4]
 
@@ -129,89 +128,6 @@ ASM_linearZoom:
 	.ciclo_borde_derecho:
 		cmp          rbx, rax
 		jge          .listo_borde_derecho
-
-		; ; Versión 1.1
-
-		; movq         xmm0, [rbx]         ; xmm0 <- [ ----- | ----- | src[n-1][m-2] | src[n-1][m-1] ]
-		; movq         xmm1, [rbx + 4*rsi] ; xmm1 <- [ ----- | ----- | src[n-2][m-2] | src[n-2][m-1] ]
-
-
-		; punpcklbw    xmm0, xmm8          ; xmm0 <- [ src[n-1][m-2] | src[n-1][m-1] ]
-		; punpcklbw    xmm1, xmm8          ; xmm1 <- [ src[n-2][m-2] | src[n-2][m-1] ]
-
-		; movdqu       xmm2, xmm0
-		; movdqu       xmm3, xmm1
-
-		; paddw        xmm2, xmm1          ; xmm2 <- [ src[n-2][m-2] + src[n-1][m-2] | src[n-2][m-1] + src[n-1][m-1] ]
-		; movdqu       xmm4, xmm2          ; xmm4 <- [ src[n-2][m-2] + src[n-1][m-2] | src[n-2][m-1] + src[n-1][m-1] ]
-		; psrldq       xmm4, 8             ; xmm4 <- [               0               | src[n-2][m-1] + src[n-1][m-1] ]
-		; paddw        xmm4, xmm2          ; xmm4 <- [ ------- | src[n-2][m-2] + src[n-1][m-2] + src[n-2][m-1] + src[n-1][m-1] ]
-
-		; psrlw        xmm2, 1             ; xmm2 <- [ (src[n-2][m-2] + src[n-1][m-2]) / 2 | (src[n-2][m-1] + src[n-1][m-1]) / 2 ]
-		; psrlw        xmm4, 2             ; xmm4 <- [ ------- | (src[n-2][m-2] + src[n-1][m-2] + src[n-2][m-1] + src[n-1][m-1]) / 4 ]
-
-		; movdqu       xmm5, xmm1          ; xmm1 <- [ src[n-2][m-2] | src[n-2][m-1] ]
-		; psrldq       xmm5, 8             ; xmm5 <- [       0       | src[n-2][m-2] ]
-		; paddw        xmm5, xmm1
-		; psrlw        xmm5, 1             ; xmm5 <- [ ------------- | (src[n-1][m-2] + src[n-1][m-1]) / 2 ]
-
-		; packuswb     xmm1, xmm8          ; xmm1 <- [       0       |        0       |            src[n-2][m-2]            |             src[n-2][m-1]           ] 
-		; packuswb     xmm5, xmm8          ; xmm5 <- [       0       |        0       |            -------------            | (src[n-1][m-2] + src[n-1][m-1]) / 2 ]
-		; packuswb     xmm2, xmm8          ; xmm2 <- [       0       |        0       | (src[n-2][m-2] + src[n-1][m-2]) / 2 | (src[n-2][m-1] + src[n-1][m-1]) / 2 ]
-		; packuswb     xmm4, xmm8          ; xmm4 <- [       0       |        0       |            -------------            | (src[n-2][m-2] + src[n-1][m-2] + src[n-2][m-1] + src[n-1][m-1]) / 4 ]
-
-		; pslldq       xmm4, 8
-		; por          xmm2, xmm4          ; xmm2 <- [ ------- | (src[n-2][m-2] + src[n-1][m-2] + src[n-2][m-1] + src[n-1][m-1]) / 4 | (src[n-2][m-2] + src[n-1][m-2]) / 2 | (src[n-2][m-1] + src[n-1][m-1]) / 2 ]
-		; pshufd       xmm2, xmm2, 0x09    ; xmm2 <- [ (src[n-1][m-1] + src[n-2][m-1]) / 2 | (src[n-1][m-1] + src[n-2][m-1]) / 2 | (src[n-1][m-1] + src[n-2][m-1] + src[n-1][m-2] + src[n-2][m-2]) / 4 | (src[n-1][m-2] + src[n-2][m-2]) / 2 ]
-
-		; pslldq       xmm5, 8
-		; por          xmm5, xmm1          ; xmm5 <- [ ------------- | (src[n-1][m-2] + src[n-1][m-1]) / 2 | src[n-2][m-2] | src[n-2][m-1] ]
-		; pshufd       xmm5, xmm5, 0x09    ; xmm5 <- [ src[n-2][m-1] | src[n-2][m-1] | (src[n-1][m-2] + src[n-1][m-1]) / 2 | src[n-2][m-2] ]
-
-
-
-		; ; Versión 1.2
-
-		; movdqu         xmm0, [rbx]         ; xmm0 <- [ src[n-1][m-1] | src[n-1][m-2] | src[n-1][m-3] | src[n-1][m-4] ]
-		; movdqu         xmm1, [rbx + 4*rsi] ; xmm1 <- [ src[n-2][m-1] | src[n-2][m-2] | src[n-2][m-3] | src[n-2][m-4] ]
-
-
-		; punpckhbw    xmm0, xmm8          ; xmm0 <- [ src[n-1][m-1] | src[n-1][m-2] ]
-		; punpckhbw    xmm1, xmm8          ; xmm1 <- [ src[n-2][m-1] | src[n-2][m-2] ]
-
-		; pshufd       xmm0, xmm0, 0x7E    ; xmm0 <- [ src[n-1][m-2] | src[n-1][m-1] ]
-		; pshufd       xmm1, xmm1, 0x7E    ; xmm1 <- [ src[n-2][m-2] | src[n-2][m-1] ]
-
-		; movdqu       xmm2, xmm0
-		; movdqu       xmm3, xmm1
-
-		; paddw        xmm2, xmm1          ; xmm2 <- [ src[n-2][m-2] + src[n-1][m-2] | src[n-2][m-1] + src[n-1][m-1] ]
-		; movdqu       xmm4, xmm2          ; xmm4 <- [ src[n-2][m-2] + src[n-1][m-2] | src[n-2][m-1] + src[n-1][m-1] ]
-		; psrldq       xmm4, 8             ; xmm4 <- [               0               | src[n-2][m-1] + src[n-1][m-1] ]
-		; paddw        xmm4, xmm2          ; xmm4 <- [ ------- | src[n-2][m-2] + src[n-1][m-2] + src[n-2][m-1] + src[n-1][m-1] ]
-
-		; psrlw        xmm2, 1             ; xmm2 <- [ (src[n-2][m-2] + src[n-1][m-2]) / 2 | (src[n-2][m-1] + src[n-1][m-1]) / 2 ]
-		; psrlw        xmm4, 2             ; xmm4 <- [ ------- | (src[n-2][m-2] + src[n-1][m-2] + src[n-2][m-1] + src[n-1][m-1]) / 4 ]
-
-		; movdqu       xmm5, xmm1          ; xmm1 <- [ src[n-2][m-2] | src[n-2][m-1] ]
-		; psrldq       xmm5, 8             ; xmm5 <- [       0       | src[n-2][m-2] ]
-		; paddw        xmm5, xmm1
-		; psrlw        xmm5, 1             ; xmm5 <- [ ------------- | (src[n-1][m-2] + src[n-1][m-1]) / 2 ]
-
-		; packuswb     xmm1, xmm8          ; xmm1 <- [       0       |        0       |            src[n-2][m-2]            |             src[n-2][m-1]           ] 
-		; packuswb     xmm5, xmm8          ; xmm5 <- [       0       |        0       |            -------------            | (src[n-1][m-2] + src[n-1][m-1]) / 2 ]
-		; packuswb     xmm2, xmm8          ; xmm2 <- [       0       |        0       | (src[n-2][m-2] + src[n-1][m-2]) / 2 | (src[n-2][m-1] + src[n-1][m-1]) / 2 ]
-		; packuswb     xmm4, xmm8          ; xmm4 <- [       0       |        0       |            -------------            | (src[n-2][m-2] + src[n-1][m-2] + src[n-2][m-1] + src[n-1][m-1]) / 4 ]
-
-		; pslldq       xmm4, 8
-		; por          xmm2, xmm4          ; xmm2 <- [ ------- | (src[n-2][m-2] + src[n-1][m-2] + src[n-2][m-1] + src[n-1][m-1]) / 4 | (src[n-2][m-2] + src[n-1][m-2]) / 2 | (src[n-2][m-1] + src[n-1][m-1]) / 2 ]
-		; pshufd       xmm2, xmm2, 0x09    ; xmm2 <- [ (src[n-1][m-1] + src[n-2][m-1]) / 2 | (src[n-1][m-1] + src[n-2][m-1]) / 2 | (src[n-1][m-1] + src[n-2][m-1] + src[n-1][m-2] + src[n-2][m-2]) / 4 | (src[n-1][m-2] + src[n-2][m-2]) / 2 ]
-
-		; pslldq       xmm5, 8
-		; por          xmm5, xmm1          ; xmm5 <- [ ------------- | (src[n-1][m-2] + src[n-1][m-1]) / 2 | src[n-2][m-2] | src[n-2][m-1] ]
-		; pshufd       xmm5, xmm5, 0x09    ; xmm5 <- [ src[n-2][m-1] | src[n-2][m-1] | (src[n-1][m-2] + src[n-1][m-1]) / 2 | src[n-2][m-2] ]
-
-
 
 		; Versión 1.3
 
@@ -241,6 +157,8 @@ ASM_linearZoom:
 		packuswb     xmm5, xmm8          ; xmm5 <- [       0       |        0       |            -------------            | (src[n-2][m-1] + src[n-2][m-2]) / 2 ]
 		packuswb     xmm2, xmm8          ; xmm2 <- [       0       |        0       | (src[n-1][m-1] + src[n-2][m-1]) / 2 | (src[n-1][m-2] + src[n-2][m-2]) / 2 ]
 		packuswb     xmm4, xmm8          ; xmm4 <- [       0       |        0       |            -------------            | (src[n-1][m-1] + src[n-2][m-1] + src[n-1][m-2] + src[n-2][m-2]) / 4 ]
+
+		; [ 3 | 2 | 1 | 0 ] => [ 1 | 1 | 2 | 0 ] (01 01 10 00 == 0101 1000 == 0x58)
 
 		pslldq       xmm4, 8
 		por          xmm2, xmm4          ; xmm2 <- [ ------- | (src[n-1][m-1] + src[n-2][m-1] + src[n-1][m-2] + src[n-2][m-2]) / 4 | (src[n-1][m-1] + src[n-2][m-1]) / 2 | (src[n-1][m-2] + src[n-2][m-2]) / 2 ]
