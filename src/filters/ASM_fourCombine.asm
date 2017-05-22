@@ -11,90 +11,92 @@ extern C_fourCombine
 ; r9  -> dsth    		(uint32_t)
 
 ASM_fourCombine:
+	push       rbp
+	mov        rbp, rsp
+	push       rbx
+	push       r12
+	push       r13
+	push       r14
+	push       r15               ; Pila alineada
 
-        push rbx
-        push r12
-        push r13
-        push r14
-        push r15
-        ; Pila alineada
+	mov        rsi, rsi
+	mov        rdx, rdx           ; Limpio a parte alta de ambos registros
 
-        mov r12, rdi    ;r12= puntero src
-        mov r13, rcx    ;r13= puntero dst
-        mov r14, rsi	;r14= srcw
-        add r14, r14
-        add r14, r14	;r14= srcw*4. Es la cantidad de bytes de una fila
+	lea        r8, [2*rsi]        ; r8 <- (4*srcw)/2 (la mitad del ancho de la imagen)
+	lea        r9, [2*rdx]        ; r9 <- (4*srch)/2 (la mitad del alto de la imagen)
 
-        xor rdi, rdi
-        xor rax, rax
+	mov        r12, rcx           ; Puntero a la última fila de la imagen nueva
+	lea        r13, [r12 + r8]    ; Puntero a la mitad de la última fila de la imagen nueva
 
-        mov eax, esi  	;eax= srcw
-        mov edi, edx  	;edi= srch
-        mul edi         ;rax= srcw*srch
-        mov edi, eax	;rdi= srcw*srch
-        add rdi, rdi	;rdi= srcw*srch*2. Es la mitad de la cantidad total de bytes de la imagen
-        mov r15, rdi
-        add r15, r15    ;r15= srcw*srch*4. Es la cantidad de bytes de la imagen
-        sub r15, r14	;r15= srcw*srch*4. Porque avanzo de a dos filas a la vez
+	mov        r10, rdx           ; Guardo rdx porque el valor va a ser pisado por la parte alta del resultado de mul
+	mov        rax, r9
+	mul        rsi
+	mov        rdx, r10
 
-        xor rbx, rbx
-        xor r9, r9
-        add rsi, rsi	;rsi= srcw*2. Es la mitad de pixeles de la fila
+	lea        r14, [r12 + rax]   ; Puntero al comienzo de la fila del medio de la imagen nueva
+	lea        r15, [r13 + rax]   ; Puntero a la mitad de la fila del medio de la imagen nueva
+
+	mov        r10, rdi           ; r10 <- &src[n-1][0]
+	lea        r11, [rdi + 4*rsi] ; r11 <- &src[n-2][0]
+
+	lea        rax, [4*rsi]
+	mul        rdx                ; rax <- 4*srcw*srch
+	lea        rax, [rdi + rax]
+
+	xor        rbx, rbx           ; Contador de columnas de src. Inicia en 0
+
 
 	.ciclo:
-		cmp rbx, r15
-		je .fin
-		cmp rbx, r14
-		je .actualizarRBX
+		cmp        r11, rax
+		jge        .fin
 
-		movdqu xmm2, [r12+rbx] 			; xmm2 = [pixel[1][1] | pixel[1][2] | pixel[1][3] | pixel[1][4]]
-		movdqu xmm0, xmm2				; xmm0 = [pixel[1][1] | pixel[1][2] | pixel[1][3] | pixel[1][4]]
-		xorps xmm1, xmm1
+		movdqu     xmm0, [r10] ; [ src[n-1][3] | src[n-1][2] | src[n-1][1] | src[n-1][0] ]
+		movdqu     xmm1, [r11] ; [ src[n-2][3] | src[n-2][2] | src[n-2][1] | src[n-2][0] ]
 
-		shufps xmm0, xmm2, 0xDD			; xmm0 = [---- | ---- | pixel[1][1] | pixel[1][3]]
-		shufps xmm2, xmm1, 0x88			; xmm2 = [---- | ---- | pixel[1][2] | pixel[1][4]]
+		; [ 3 | 2 | 1 | 0 ] => [ - | - | 2 | 0 ] (-- -- 10 00 == ---- 1000 == 0x-8)
+		; [ 3 | 2 | 1 | 0 ] => [ - | - | 3 | 1 ] (-- -- 11 01 == ---- 1101 == 0x-D)
 
-		xor rcx, rcx
-		mov rcx, rsi
-		add rcx, rcx
-		add rcx, rbx
-		movdqu xmm4, [r12+rcx] 			; xmm4 = [pixel[2][1] | pixel[2][2] | pixel[2][3] | pixel[2][4]]
-		movdqu xmm1, xmm4				; xmm1 = [pixel[2][1] | pixel[2][2] | pixel[2][3] | pixel[2][4]]
+		pshufd     xmm2, xmm0, 0x08 ; [ ----------- | ----------- | src[n-1][2] | src[n-1][0] ]
+		pshufd     xmm3, xmm0, 0x0D ; [ ----------- | ----------- | src[n-1][3] | src[n-1][1] ]
+		pshufd     xmm4, xmm1, 0x08 ; [ ----------- | ----------- | src[n-2][2] | src[n-2][0] ]
+		pshufd     xmm5, xmm1, 0x0D ; [ ----------- | ----------- | src[n-2][3] | src[n-2][1] ]
 
-		shufps xmm1, xmm4, 0xDD			; xmm1 = [---- | ---- | pixel[2][1] | pixel[2][3]]
-		shufps xmm4, xmm4, 0x88			; xmm4 = [---- | ---- | pixel[2][2] | pixel[2][4]]
+		movq       [r12], xmm2
+		movq       [r13], xmm3
+		movq       [r14], xmm4
+		movq       [r15], xmm5
 
-		xor rcx, rcx
-		mov rcx, r9
-		add rcx, rdi
-		movq [r13+r9], xmm0
-		movq [r13+rcx], xmm1
+		add        r12, 8
+		add        r13, 8
+		add        r14, 8
+		add        r15, 8
+		add        r10, 16
+		add        r11, 16
 
-		xor rcx, rcx
-		mov rcx, rsi
-		add rcx, r9
-		movq [r13+rcx], xmm2
+		add        rbx, 4
 
-		add rcx, rdi
-		movq [r13+rcx], xmm4
+		cmp        rbx, rsi
+		jl         .fin_ciclo
 
-		add rbx, 16
-		add r9, 8
-		jmp .ciclo
+		xor        rbx, rbx
 
-	.actualizarRBX:
-		add rbx, rsi 
-		add rbx, rsi	; Me salteo una fila porque en el ciclo avanzo de a dos
-		add r14, rbx 
-		add r9, rsi	
-		jmp .ciclo
+		lea        r12, [r12 + r8]
+		lea        r13, [r13 + r8]
+		lea        r14, [r14 + r8]
+		lea        r15, [r15 + r8]
+		lea        r10, [r10 + 4*rsi]
+		lea        r11, [r11 + 4*rsi]
 
-        .fin:
-        ; Desencolo
-        pop r15
-        pop r14
-        pop r13
-        pop r12
-        pop rbx
 
-ret
+		.fin_ciclo:
+			jmp        .ciclo
+
+
+	.fin:
+		pop        r15
+		pop        r14
+		pop        r13
+		pop        r12
+		pop        rbx
+		pop        rbp
+		ret
