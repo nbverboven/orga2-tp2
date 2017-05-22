@@ -27,10 +27,7 @@ void agregoIguales(uint8_t* src, uint32_t srcw, uint32_t srch __attribute__((unu
 
 		while ( columna_dst < dstw-1 )
 		{
-			matrix_dst[fila_dst][columna_dst].a = matrix_src[fila_src][columna_src].a;
-			matrix_dst[fila_dst][columna_dst].b = matrix_src[fila_src][columna_src].b;
-			matrix_dst[fila_dst][columna_dst].g = matrix_src[fila_src][columna_src].g;
-			matrix_dst[fila_dst][columna_dst].r = matrix_src[fila_src][columna_src].r;
+			matrix_dst[fila_dst][columna_dst] = matrix_src[fila_src][columna_src];
 
 			columna_dst += 2;
 			columna_src += 1;
@@ -151,7 +148,7 @@ void agregoEntre4(uint8_t* dst, uint32_t dstw, uint32_t dsth)
 			img_m_abajo_der_G = matrix_dst[fila_dst-1][columna_dst+1].g;
 			img_m_abajo_der_R = matrix_dst[fila_dst-1][columna_dst+1].r;
 
-			matrix_dst[fila_dst][columna_dst].a =  img_m_arriba_izq_A;//fmax( fmax( ( img_m_arriba_izq_A, img_m_arriba_der_A ), img_m_abajo_izq_A ), img_m_abajo_der_A);
+			matrix_dst[fila_dst][columna_dst].a =  img_m_arriba_izq_A;
 			matrix_dst[fila_dst][columna_dst].b = fmax( fmin( ( img_m_arriba_izq_B + img_m_arriba_der_B + img_m_abajo_izq_B + img_m_abajo_der_B ) >> 2, 255), 0);
 			matrix_dst[fila_dst][columna_dst].g = fmax( fmin( ( img_m_arriba_izq_G + img_m_arriba_der_G + img_m_abajo_izq_G + img_m_abajo_der_G ) >> 2, 255), 0);
 			matrix_dst[fila_dst][columna_dst].r = fmax( fmin( ( img_m_arriba_izq_R + img_m_arriba_der_R + img_m_abajo_izq_R + img_m_abajo_der_R ) >> 2, 255), 0);
@@ -177,10 +174,7 @@ void agregoBordes(uint8_t* dst, uint32_t dstw, uint32_t dsth)
 
 	while ( columna_dst < dstw )
 	{
-		matrix_dst[0][columna_dst].a = matrix_dst[1][columna_dst].a;
-		matrix_dst[0][columna_dst].b = matrix_dst[1][columna_dst].b;
-		matrix_dst[0][columna_dst].g = matrix_dst[1][columna_dst].g;
-		matrix_dst[0][columna_dst].r = matrix_dst[1][columna_dst].r;
+		matrix_dst[0][columna_dst] = matrix_dst[1][columna_dst];
 
 		columna_dst += 1;
 	}
@@ -191,10 +185,7 @@ void agregoBordes(uint8_t* dst, uint32_t dstw, uint32_t dsth)
 
 	while ( fila_dst < dsth )
 	{
-		matrix_dst[fila_dst][dstw-1].a = matrix_dst[fila_dst][dstw-2].a;
-		matrix_dst[fila_dst][dstw-1].b = matrix_dst[fila_dst][dstw-2].b;
-		matrix_dst[fila_dst][dstw-1].g = matrix_dst[fila_dst][dstw-2].g;
-		matrix_dst[fila_dst][dstw-1].r = matrix_dst[fila_dst][dstw-2].r;
+		matrix_dst[fila_dst][dstw-1] = matrix_dst[fila_dst][dstw-2];
 
 		fila_dst += 1;
 	}
@@ -215,6 +206,4 @@ void C_linearZoom(uint8_t* src, uint32_t srcw, uint32_t srch,
 
 	// Agrego los bordes derecho e inferior
 	agregoBordes(dst, dstw, dsth);
-
-
 }
