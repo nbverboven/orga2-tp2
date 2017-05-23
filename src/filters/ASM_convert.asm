@@ -1,8 +1,4 @@
 %define offset_ARGB 4
-%define offset_ARGB_A 0
-%define offset_ARGB_R 3
-%define offset_ARGB_G 2
-%define offset_ARGB_B 1
 
 global ASM_convertYUVtoRGB
 global ASM_convertRGBtoYUV
@@ -10,15 +6,6 @@ extern C_convertYUVtoRGB
 extern C_convertRGBtoYUV
 
 section .rodata 
-    replaceAto1: dw 0,0,0,1, 0,0,0,1
-
-    mask_Y: dw 66, 129, 25, 128, 66, 129, 25, 128
-    mask_U: dw -38, -74, 112, 128, -38, -74, 112, 128
-    mask_V: dw 112, -94, -18, 128, 112, -94, -18, 128
-
-    add_y: dd 16, 16, 16, 16
-    add_u: dd 128, 128, 128, 128
-    add_v: dd 128, 128, 128, 128
 
     soloU: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
     soloV: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
@@ -32,11 +19,20 @@ section .rodata
     val208: dd 0, 208, 0, 0
     val409: dd 0, 409, 0, 0
 
-section .text
+    soloG: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
+    soloB: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
+    soloR: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
 
-    ;        ********    ATENCION!!     ********
-    ;    Esta funcion esta siendo desarrollada por Andres.
-    ;    Puto el que lee
+    val66: dd 0, 66, 0, 0
+    val129: dd 0, 129, 0, 0
+    val25: dd 0, 25, 0, 0
+    valmenos38: dd 0, -38, 0, 0
+    val74: dd 0, 74, 0, 0
+    val112: dd 0, 112, 0, 0
+    val94: dd 0, 94, 0, 0
+    val18: dd 0, 18, 0, 0
+
+section .text
 
     ; rdi -> puntero src    (uint8_t)
     ; rsi -> puntero srcw   (uint32_t)
@@ -46,7 +42,7 @@ section .text
     ; r9 -> puntero dsth    (uint32_t)
     ASM_convertYUVtoRGB:
 
-             push rbp
+            push rbp
             mov rbp, rsp
             push rbx
             push r12
@@ -230,94 +226,142 @@ section .text
             mov r14, rax    ;r14= srcw*srch*4
 
             xor rbx, rbx
+
         .ciclo:
-            cmp rbx, r14    ;if rbx == srch*srcw*4
-            je .fin         ; then jmp .fin
+            cmp rbx, r14
+            je .fin
+
+            xorps xmm0, xmm0
+            movq xmm1, [r12+rbx]
+            punpcklbw xmm1, xmm0    ;xmm7=[A B G R | A2 B2 G2 R2]
+            movdqu xmm2, xmm1
+            movdqu xmm3, xmm1
             
-            pmovzxbw xmm0, [r12+rbx]    ; xmm0 = [ pixel[1][1] | pixel[1][2] ]
-            pmovzxbw xmm15, [r12+rbx]   ; xmm0 = [ pixel[1][1] | pixel[1][2] ]
-            ;Como los pixeles vienen ARGB los voy a convertir a BRG1 para calcular YUV
-            psrlq xmm0, 16             ; xmm0 << 16 (word)
-            psllq xmm15, 16            ; xmm15 >> 16 (word)
-            pblendw xmm0, xmm15, 0x88
-            psrlq xmm0, 16             ; xmm0 << 16 (word)
-            psllq xmm15, 16            ; xmm15 >> 16 (word)
-            pblendw xmm0, xmm15, 0x88
-            psrlq xmm0, 16             ; xmm0 << 16 (word)
-            movdqu xmm15, [replaceAto1]; xmm3 = [ 0 0 0 1 | 0 0 0 1 ]
-            pblendw xmm0, xmm15, 0x88  ; xmm0 = [ R G B 1 | R G B 1]
-            ; xmm0 = [  R   G   B   1  |  R   G   B   1  ]
+        ;solo B
+            pand xmm1, [soloB]      ;xmm1=[0 B 0 0 | 0 B2 0 0]
+            movdqu xmm4, xmm1
+            punpckhwd xmm1, xmm0    ;xmm1=[0 B 0 0]
+            punpcklwd xmm4, xmm0    ;xmm4=[0 B2 0 0]
 
-            ; Estoy moviendo 2 pixeles,1 pixel = 4 bits (ARGB)
+        ;solo G
+            psrldq xmm2, 2
+            pand xmm2, [soloG]      ;xmm2=[0 G 0 0 | 0 G2 0 0]
+            movdqu xmm5, xmm2
+            punpckhwd xmm2, xmm0    ;xmm2=[0 G 0 0]
+            punpcklwd xmm5, xmm0    ;xmm5=[0 G2 0 0]
+           
+        ;solo R
+            psrldq xmm3, 4
+            pand xmm3, [soloR]      ;xmm3=[0 R 0 0 | 0 R2 0 0]
+            movdqu xmm6, xmm3
+            punpckhwd xmm3, xmm0    ;xmm3=[0 R 0 0]
+            punpcklwd xmm6, xmm0    ;xmm6=[0 R2 0 0]
 
-            ;uso rcx para operar con el segundo pixel
-            mov rcx, rbx
-            add rcx, 4
-            ;copio A dado que sigue igual
-            mov al, [r12+rbx]   ; copio A primer pixel
-            mov [r13+rbx], al   ;A primer pixel
-            mov al, [r12+rcx]   ; copio A segundo pixel
-            mov [r13+rcx], al   ;A segundo pixel
+        ;obtengo Y
+            movdqu xmm12, xmm3      
+            movdqu xmm13, xmm6      
+            pmulld xmm12, [val66]	;xmm12=[0 66*R 0 0]
+            pmulld xmm13, [val66]	;xmm13=[0 66*R2 0 0]
+            movdqu xmm10, xmm2
+            movdqu xmm11, xmm5
+            pmulld xmm10, [val129]	;xmm10=[0 129*G 0 0]
+            pmulld xmm11, [val129]	;xmm11=[0 129*G2 0 0]
+            movdqu xmm14, xmm1
+            movdqu xmm15, xmm4
+            pmulld xmm14, [val25]	;xmm14=[0 25*B 0 0]
+            pmulld xmm15, [val25]	;xmm15=[0 25*B2 0 0]
+            paddd xmm12, xmm10
+            paddd xmm13, xmm11
+            paddd xmm12, xmm14	
+            paddd xmm13, xmm15
+            paddd xmm12, [val128]
+            paddd xmm13, [val128]
+            psrld xmm12, 8
+            psrld xmm13, 8
+            paddd xmm12, [val16] 	;xmm12=[0 nuevoY 0 0]
+            paddd xmm13, [val16]	;xmm13=[0 nuevoY2 0 0]
 
-            ;calculo v
-            movdqu xmm3, [mask_V]   ; xmm3 = [ 112 -94 -18 128 | 112 -94 -18 128 ]
-                                    ; xmm0 = [  R   G   B   1  |  R   G   B   1  ]
-            pmaddwd xmm3, xmm0      ; xmm3 = [ 112*R-94*G  -18*B+128 | 112*R-94*G  -18*B+128 ]
-            phaddd xmm3, xmm3       ; xmm3 = [ xxx xxx | (112*R-94*G-18*B+128) (112*R-94*G-18*B+128) ]
-            psrld xmm3, 8           ; xmm3 >> 8 (dword)
-            movdqu xmm11, [add_v]   ; xmm11 = [ 128 128 128 128 ]
-            paddd xmm3, xmm11       ; xmm3 = [ ? ? (128+V) (128+V) ]
-            packusdw xmm3,xmm3      ; xmm3 = [ ? ? ? ? | ? ? V V ]
-            packuswb xmm3,xmm3      ; xmm3 = [ ? ? ? ? ? ? ? ? | ? ? ? ? ? ? V V ]
-            movq rax, xmm3
+        ;obtengo U
+            movdqu xmm7, xmm3      
+            movdqu xmm8, xmm6      
+            pmulld xmm7, [valmenos38]	;xmm7=[0 -38*R 0 0]
+            pmulld xmm8, [valmenos38]	;xmm8=[0 -38*R2 0 0]
+            movdqu xmm10, xmm2
+            movdqu xmm11, xmm5
+            pmulld xmm10, [val74]	;xmm10=[0 74*G 0 0]
+            pmulld xmm11, [val74]	;xmm11=[0 74*G2 0 0]
+            movdqu xmm14, xmm1
+            movdqu xmm15, xmm4
+            pmulld xmm14, [val112]	;xmm14=[0 112*B 0 0]
+            pmulld xmm15, [val112]	;xmm15=[0 112*B2 0 0]
+            psubd xmm7, xmm10
+            psubd xmm8, xmm11
+            paddd xmm7, xmm14	
+            paddd xmm8, xmm15
+            paddd xmm7, [val128]
+            paddd xmm8, [val128]
+            psrld xmm7, 8
+            psrld xmm8, 8
+            paddd xmm7, [val128] 	;xmm7=[0 nuevoU 0 0]
+            paddd xmm8, [val128]	;xmm8=[0 nuevoU2 0 0]
 
-            inc rcx
-            inc rbx
-            mov [r13+rbx], al
-            mov al, ah
-            mov [r13+rcx], al
 
+        ;obtengo V     
+            pmulld xmm3, [val112]	;xmm3=[0 112*R 0 0]
+            pmulld xmm6, [val112]	;xmm6=[0 112*R2 0 0]
+            movdqu xmm10, xmm2
+            movdqu xmm11, xmm5
+            pmulld xmm10, [val94]	;xmm10=[0 94*G 0 0]
+            pmulld xmm11, [val94]	;xmm11=[0 94*G2 0 0]
+            movdqu xmm14, xmm1
+            movdqu xmm15, xmm4
+            pmulld xmm14, [val18]	;xmm14=[0 18*B 0 0]
+            pmulld xmm15, [val18]	;xmm15=[0 18*B2 0 0]
+            psubd xmm3, xmm10
+            psubd xmm6, xmm11
+            psubd xmm3, xmm14	
+            psubd xmm6, xmm15
+            paddd xmm3, [val128]
+            paddd xmm6, [val128]
+            psrld xmm3, 8
+            psrld xmm6, 8
+            paddd xmm3, [val128] 	;xmm3=[0 nuevoV 0 0]
+            paddd xmm6, [val128]	;xmm6=[0 nuevoV2 0 0]
 
-            ;calculo U
-            movdqu xmm2, [mask_U]   ; xmm2 = [ -38 -74 112 128 ]
-                                    ; xmm0 = [  R   G   B   1  |  R   G   B   1  ]
-            pmaddwd xmm2, xmm0      ; xmm2 = [ -38*R-74*G 112*B+128 | -38*R-74*G 112*B+128 ]
-            phaddd xmm2, xmm2       ; xmm2 = [ xxx xxx |  (-38*R-74*G+112*B+128)  (-38*R-74*G+112*B+128) ]
-            psrld xmm2, 8           ; xmm2 >> 8 (dword)
-            movdqu xmm10, [add_u]   ; xmm10 = [ 128 128 128 128 ]
-            paddd xmm2, xmm10       ; xmm2 = [ ? ? (128+Y) (128+U) ]
-            packusdw xmm2,xmm2      ; xmm2 = [ ? ? ? ? | ? ? U U ]
-            packuswb xmm2,xmm2      ; xmm2 = [ ? ? ? ? ? ? ? ? | ? ? ? ? ? ? U U ]
-            movq rax, xmm2
+        ;acomodo Y
+            packusdw xmm12, xmm0
+            packuswb xmm12, xmm0
+            packusdw xmm13, xmm0
+            packuswb xmm13, xmm0
+            pslldq xmm12, 4
+            por xmm12, xmm13        ;xmm12=[---- | ---- | 0 nuevoY 0 0 | 0 nuevoY2 0 0]
 
-            inc rcx
-            inc rbx
-            mov [r13+rbx], al
-            mov al, ah
-            mov [r13+rcx], al
-            
+        ;acomodo U    
+            packusdw xmm7, xmm0
+            packuswb xmm7, xmm0
+            packusdw xmm8, xmm0
+            packuswb xmm8, xmm0
+            pslldq xmm7, 5
+            pslldq xmm8, 1
+            por xmm7, xmm8        ;xmm7=[---- | ---- | 0 0 nuevoU 0 | 0 0 nuevoU2 0]
 
-            ;calculo Y
-            movdqu xmm1, [mask_Y]   ; xmm1 = [  66 129 25 128  |  66 129 25 128  ]
-                                    ; xmm0 = [  R   G   B   1  |  R   G   B   1  ]
-            pmaddwd xmm1, xmm0      ; xmm1 = [ 66*R+129*G 25*B+128 | 66*R+129*G 25*B+128 ]
-            phaddd xmm1, xmm1       ; xmm1 = [ xxx xxx |  (66*R+129*G+25*B+128)  (66*R+129*G+25*B+128) ]
-            psrld xmm1, 8           ; xmm1 >> 8 (dword)
-            movdqu xmm9, [add_y]    ; xmm9 = [ 16 16 16 16 ]
-            paddd xmm1, xmm9        ; xmm1 = [ ? ? (16+Y) (16+Y) ]
-            packusdw xmm1,xmm1      ; xmm1 = [ ? ? ? ? | ? ? Y Y ]
-            packuswb xmm1,xmm1      ; xmm1 = [ ? ? ? ? ? ? ? ? | ? ? ? ? ? ? Y Y ]
-            movq rax, xmm1
+        ;acomodo V
+            packusdw xmm3, xmm0
+            packuswb xmm3, xmm0
+            packusdw xmm6, xmm0
+            packuswb xmm6, xmm0
+            pslldq xmm3, 6
+            pslldq xmm6, 2
+            por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 0 nuevoV | 0 0 0 nuevoV2]
 
-            inc rcx
-            inc rbx
-            mov [r13+rbx], al
-            mov al, ah
-            mov [r13+rcx], al
+        ;junto todo
+            por xmm12, xmm7
+            por xmm12, xmm3         ;xmm12=[---- | ---- | 0 nuevoY nuevoU nuevoV | 0 nuevoY2 nuevoU2 nuevoV2]
 
-            ; incremento rcx para que pase al nuevo pixel
-            inc rcx
-            mov rbx, rcx
+        ;muevo el dato a la nueva imagen
+            movq [r13+rbx], xmm12
+
+            add rbx, 8
             jmp .ciclo
 
         .fin:
@@ -327,5 +371,6 @@ section .text
             pop r13
             pop r12
             pop rbx
-            pop rbp
+            pop rbp            
+
     ret
