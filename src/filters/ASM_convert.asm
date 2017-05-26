@@ -23,14 +23,15 @@ section .rodata
     soloB: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
     soloR: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
 
-    val66: dd 0, 66, 0, 0
-    val129: dd 0, 129, 0, 0
-    val25: dd 0, 25, 0, 0
-    valmenos38: dd 0, -38, 0, 0
-    val74: dd 0, 74, 0, 0
-    val112: dd 0, 112, 0, 0
-    val94: dd 0, 94, 0, 0
-    val18: dd 0, 18, 0, 0
+    val66: dw 0, 66, 0, 0, 0, 66, 0, 0
+    val129: dw 0, 129, 0, 0, 0, 129, 0, 0
+    val25: dw 0, 25, 0, 0, 0, 25, 0, 0
+    valmenos38: dw 0, -38, 0, 0, 0, -38, 0, 0
+    val74: dw 0, 74, 0, 0, 0, 74, 0, 0
+    val112: dw 0, 112, 0, 0, 0, 112, 0, 0
+    val94: dw 0, 94, 0, 0, 0, 94, 0, 0
+    val18: dw 0, 18, 0, 0, 0, 18, 0, 0
+    val128word: dw 0, 128, 0, 0, 0, 128, 0, 0
 
 section .text
 
@@ -239,120 +240,72 @@ section .text
             
         ;solo B
             pand xmm1, [soloB]      ;xmm1=[0 B 0 0 | 0 B2 0 0]
-            movdqu xmm4, xmm1
-            punpckhwd xmm1, xmm0    ;xmm1=[0 B 0 0]
-            punpcklwd xmm4, xmm0    ;xmm4=[0 B2 0 0]
 
         ;solo G
             psrldq xmm2, 2
             pand xmm2, [soloG]      ;xmm2=[0 G 0 0 | 0 G2 0 0]
-            movdqu xmm5, xmm2
-            punpckhwd xmm2, xmm0    ;xmm2=[0 G 0 0]
-            punpcklwd xmm5, xmm0    ;xmm5=[0 G2 0 0]
            
         ;solo R
             psrldq xmm3, 4
             pand xmm3, [soloR]      ;xmm3=[0 R 0 0 | 0 R2 0 0]
-            movdqu xmm6, xmm3
-            punpckhwd xmm3, xmm0    ;xmm3=[0 R 0 0]
-            punpcklwd xmm6, xmm0    ;xmm6=[0 R2 0 0]
 
         ;obtengo Y
-            movdqu xmm12, xmm3      
-            movdqu xmm13, xmm6      
-            pmulld xmm12, [val66]	;xmm12=[0 66*R 0 0]
-            pmulld xmm13, [val66]	;xmm13=[0 66*R2 0 0]
+            movdqu xmm12, xmm3         
+            pmulld xmm12, [val66]	;xmm12=[0 66*R 0 0 | 0 66*R2 0 0]
+
             movdqu xmm10, xmm2
-            movdqu xmm11, xmm5
-            pmulld xmm10, [val129]	;xmm10=[0 129*G 0 0]
-            pmulld xmm11, [val129]	;xmm11=[0 129*G2 0 0]
+            pmulld xmm10, [val129]	;xmm10=[0 129*G 0 0 | 0 129*G2 0 0]
+
             movdqu xmm14, xmm1
-            movdqu xmm15, xmm4
-            pmulld xmm14, [val25]	;xmm14=[0 25*B 0 0]
-            pmulld xmm15, [val25]	;xmm15=[0 25*B2 0 0]
+            pmulld xmm14, [val25]	;xmm14=[0 25*B 0 0 | 0 25*B2 0 0]
+         
             paddd xmm12, xmm10
-            paddd xmm13, xmm11
             paddd xmm12, xmm14	
-            paddd xmm13, xmm15
-            paddd xmm12, [val128]
-            paddd xmm13, [val128]
+            paddd xmm12, [val128word]
             psrld xmm12, 8
-            psrld xmm13, 8
-            paddd xmm12, [val16] 	;xmm12=[0 nuevoY 0 0]
-            paddd xmm13, [val16]	;xmm13=[0 nuevoY2 0 0]
+            paddd xmm12, [val16] 	;xmm12=[0 nuevoY 0 0 | 0 nuevoY2 0 0]
 
         ;obtengo U
             movdqu xmm7, xmm3      
-            movdqu xmm8, xmm6      
-            pmulld xmm7, [valmenos38]	;xmm7=[0 -38*R 0 0]
-            pmulld xmm8, [valmenos38]	;xmm8=[0 -38*R2 0 0]
-            movdqu xmm10, xmm2
-            movdqu xmm11, xmm5
-            pmulld xmm10, [val74]	;xmm10=[0 74*G 0 0]
-            pmulld xmm11, [val74]	;xmm11=[0 74*G2 0 0]
-            movdqu xmm14, xmm1
-            movdqu xmm15, xmm4
-            pmulld xmm14, [val112]	;xmm14=[0 112*B 0 0]
-            pmulld xmm15, [val112]	;xmm15=[0 112*B2 0 0]
-            psubd xmm7, xmm10
-            psubd xmm8, xmm11
-            paddd xmm7, xmm14	
-            paddd xmm8, xmm15
-            paddd xmm7, [val128]
-            paddd xmm8, [val128]
-            psrld xmm7, 8
-            psrld xmm8, 8
-            paddd xmm7, [val128] 	;xmm7=[0 nuevoU 0 0]
-            paddd xmm8, [val128]	;xmm8=[0 nuevoU2 0 0]
+            pmulld xmm7, [valmenos38]	;xmm7=[0 -38*R 0 0 | 0 -38*R2 0 0]
 
+            movdqu xmm10, xmm2
+            pmulld xmm10, [val74]	;xmm10=[0 74*G 0 0 | 0 74*G2 0 0]
+
+            movdqu xmm14, xmm1
+            pmulld xmm14, [val112]	;xmm14=[0 112*B 0 0 | 0 112*B 0 0]
+
+            psubd xmm7, xmm10
+            paddd xmm7, xmm14	
+            paddd xmm7, [val128word]
+            psrld xmm7, 8
+            paddd xmm7, [val128word] 	;xmm7=[0 nuevoU 0 0 | 0 nuevoU2 0 0]
 
         ;obtengo V     
-            pmulld xmm3, [val112]	;xmm3=[0 112*R 0 0]
-            pmulld xmm6, [val112]	;xmm6=[0 112*R2 0 0]
+            pmulld xmm3, [val112]	;xmm3=[0 112*R 0 0 | 0 112*R2 0 0]
+
             movdqu xmm10, xmm2
-            movdqu xmm11, xmm5
-            pmulld xmm10, [val94]	;xmm10=[0 94*G 0 0]
-            pmulld xmm11, [val94]	;xmm11=[0 94*G2 0 0]
+            pmulld xmm10, [val94]	;xmm10=[0 94*G 0 0 | 0 94*G 0 0]
+
             movdqu xmm14, xmm1
-            movdqu xmm15, xmm4
-            pmulld xmm14, [val18]	;xmm14=[0 18*B 0 0]
-            pmulld xmm15, [val18]	;xmm15=[0 18*B2 0 0]
+            pmulld xmm14, [val18]	;xmm14=[0 18*B 0 0 | 0 18*B 0 0]
+
             psubd xmm3, xmm10
-            psubd xmm6, xmm11
             psubd xmm3, xmm14	
-            psubd xmm6, xmm15
-            paddd xmm3, [val128]
-            paddd xmm6, [val128]
+            paddd xmm3, [val128word]
             psrld xmm3, 8
-            psrld xmm6, 8
-            paddd xmm3, [val128] 	;xmm3=[0 nuevoV 0 0]
-            paddd xmm6, [val128]	;xmm6=[0 nuevoV2 0 0]
+            paddd xmm3, [val128word] 	;xmm3=[0 nuevoV 0 0 | 0 nuevoV2 0 0]
 
         ;acomodo Y
-            packusdw xmm12, xmm0
-            packuswb xmm12, xmm0
-            packusdw xmm13, xmm0
-            packuswb xmm13, xmm0
-            pslldq xmm12, 4
-            por xmm12, xmm13        ;xmm12=[---- | ---- | 0 nuevoY 0 0 | 0 nuevoY2 0 0]
+            packuswb xmm12, xmm0 	;xmm12=[---- | ---- | 0 nuevoY 0 0 | 0 nuevoY2 0 0]
 
         ;acomodo U    
-            packusdw xmm7, xmm0
             packuswb xmm7, xmm0
-            packusdw xmm8, xmm0
-            packuswb xmm8, xmm0
-            pslldq xmm7, 5
-            pslldq xmm8, 1
-            por xmm7, xmm8        ;xmm7=[---- | ---- | 0 0 nuevoU 0 | 0 0 nuevoU2 0]
+            pslldq xmm7, 1 			;xmm7=[---- | ---- | 0 0 nuevoU 0 | 0 0 nuevoU2 0]
 
         ;acomodo V
-            packusdw xmm3, xmm0
             packuswb xmm3, xmm0
-            packusdw xmm6, xmm0
-            packuswb xmm6, xmm0
-            pslldq xmm3, 6
-            pslldq xmm6, 2
-            por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 0 nuevoV | 0 0 0 nuevoV2]
+            pslldq xmm3, 2 			;xmm3=[---- | ---- | 0 0 0 nuevoV | 0 0 0 nuevoV2]
 
         ;junto todo
             por xmm12, xmm7
