@@ -12,7 +12,7 @@ section .rodata
     soloY: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
 
     val128: dd 0, 128, 0, 0
-    val16: dd 0, 16, 0, 0
+    val16: 	dd 0, 16, 0, 0
     val298: dd 0, 298, 0, 0
     val516: dd 0, 516, 0, 0
     val100: dd 0, 100, 0, 0
@@ -23,14 +23,15 @@ section .rodata
     soloB: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
     soloR: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
 
-    val66: dw 0, 66, 0, 0, 0, 66, 0, 0
-    val129: dw 0, 129, 0, 0, 0, 129, 0, 0
-    val25: dw 0, 25, 0, 0, 0, 25, 0, 0
-    valmenos38: dw 0, -38, 0, 0, 0, -38, 0, 0
-    val74: dw 0, 74, 0, 0, 0, 74, 0, 0
-    val112: dw 0, 112, 0, 0, 0, 112, 0, 0
-    val94: dw 0, 94, 0, 0, 0, 94, 0, 0
-    val18: dw 0, 18, 0, 0, 0, 18, 0, 0
+    val66:		dw 0, 66, 0, 0, 0, 66, 0, 0
+    val129: 	dw 0, 129, 0, 0, 0, 129, 0, 0
+    val25: 		dw 0, 25, 0, 0, 0, 25, 0, 0
+    val16word: 	dw 0, 16, 0, 0, 0, 16, 0, 0
+    val38: 		dw 0, 38, 0, 0, 0, 38, 0, 0
+    val74: 		dw 0, 74, 0, 0, 0, 74, 0, 0
+    val112: 	dw 0, 112, 0, 0, 0, 112, 0, 0
+    val94: 		dw 0, 94, 0, 0, 0, 94, 0, 0
+    val18: 		dw 0, 18, 0, 0, 0, 18, 0, 0
     val128word: dw 0, 128, 0, 0, 0, 128, 0, 0
 
 section .text
@@ -71,7 +72,7 @@ section .text
 
             xorps xmm0, xmm0
             movq xmm1, [r12+rbx]
-            punpcklbw xmm1, xmm0    ;xmm7=[A V U Y | A2 V2 U2 Y2]
+            punpcklbw xmm1, xmm0    ;xmm1=[A V U Y | A2 V2 U2 Y2]
             movdqu xmm2, xmm1
             movdqu xmm3, xmm1
             
@@ -106,13 +107,16 @@ section .text
         ;obtengo B
             movdqu xmm12, xmm3      ;xmm12=[0 298*(Y-16) 0 0] 
             movdqu xmm13, xmm6      ;xmm13=[0 298*(Y2-16) 0 0]
+
             movdqu xmm10, xmm2
             movdqu xmm11, xmm5
             pmulld xmm10, [val516]  ;xmm10=[0 516*(U-128) 0 0]
             pmulld xmm11, [val516]  ;xmm11=[0 516*(U2-128) 0 0]
+
             paddd xmm12, xmm10
             paddd xmm12, [val128]
             psrld xmm12, 8          ;xmm12=[0 298*(Y-16)+516*(U-128)-128 << 8 0 0]
+
             paddd xmm13, xmm11
             paddd xmm13, [val128]
             psrld xmm13, 8          ;xmm13=[0 298*(Y2-16)+516*(U2-128)-128 << 8 0 0]
@@ -120,18 +124,22 @@ section .text
         ;obtengo G
             movdqu xmm14, xmm3      ;xmm14=[0 298*(Y-16) 0 0] 
             movdqu xmm15, xmm6      ;xmm15=[0 298*(Y2-16) 0 0]
+
             movdqu xmm10, xmm2
             movdqu xmm11, xmm5
             pmulld xmm10, [val100]  ;xmm10=[0 100*(U-128) 0 0]
             pmulld xmm11, [val100]  ;xmm11=[0 100*(U2-128) 0 0]
+
             movdqu xmm8, xmm1
             movdqu xmm9, xmm4
             pmulld xmm8, [val208]  ;xmm8=[0 208*(V-128) 0 0]
             pmulld xmm9, [val208]  ;xmm9=[0 208*(V2-128) 0 0]
+
             psubd xmm14, xmm10
             psubd xmm14, xmm8
             paddd xmm14, [val128]
             psrld xmm14, 8          ;xmm14=[0 298*(Y-16)-100*(U-128)-208*(V-128)+128 << 8 0 0]
+
             psubd xmm15, xmm11
             psubd xmm15, xmm9
             paddd xmm15, [val128]
@@ -200,11 +208,12 @@ section .text
     ret
 
     ; rdi -> puntero src    (uint8_t)
-    ; rsi -> srcw   (uint32_t)
-    ; rdx -> srch   (uint32_t)
+    ; rsi -> srcw   		(uint32_t)
+    ; rdx -> srch   		(uint32_t)
     ; rcx -> puntero dst    (uint8_t)
-    ; r8 -> dstw    (uint32_t)
-    ; r9 -> dsth    (uint32_t)
+    ; r8 -> dstw    		(uint32_t)
+    ; r9 -> dsth    		(uint32_t)
+
     ASM_convertRGBtoYUV:
             push rbp
             mov rbp, rsp
@@ -234,7 +243,7 @@ section .text
 
             xorps xmm0, xmm0
             movq xmm1, [r12+rbx]
-            punpcklbw xmm1, xmm0    ;xmm7=[A B G R | A2 B2 G2 R2]
+            punpcklbw xmm1, xmm0    ;xmm1=[A B G R | A2 B2 G2 R2]
             movdqu xmm2, xmm1
             movdqu xmm3, xmm1
             
@@ -251,68 +260,68 @@ section .text
 
         ;obtengo Y
             movdqu xmm12, xmm3         
-            pmulld xmm12, [val66]	;xmm12=[0 66*R 0 0 | 0 66*R2 0 0]
+            pmullw xmm12, [val66]	;xmm12=[0 66*R 0 0 | 0 66*R2 0 0]
 
             movdqu xmm10, xmm2
-            pmulld xmm10, [val129]	;xmm10=[0 129*G 0 0 | 0 129*G2 0 0]
+            pmullw xmm10, [val129]	;xmm10=[0 129*G 0 0 | 0 129*G2 0 0]
 
             movdqu xmm14, xmm1
-            pmulld xmm14, [val25]	;xmm14=[0 25*B 0 0 | 0 25*B2 0 0]
+            pmullw xmm14, [val25]	;xmm14=[0 25*B 0 0 | 0 25*B2 0 0]
          
-            paddd xmm12, xmm10
-            paddd xmm12, xmm14	
-            paddd xmm12, [val128word]
-            psrld xmm12, 8
-            paddd xmm12, [val16] 	;xmm12=[0 nuevoY 0 0 | 0 nuevoY2 0 0]
+            paddw xmm12, xmm10
+            paddw xmm12, xmm14	
+            paddw xmm12, [val128word]
+            psraw xmm12, 8
+            paddw xmm12, [val16word] ;xmm12=[0 nuevoY 0 0 | 0 nuevoY2 0 0]
 
         ;obtengo U
             movdqu xmm7, xmm3      
-            pmulld xmm7, [valmenos38]	;xmm7=[0 -38*R 0 0 | 0 -38*R2 0 0]
+            pmullw xmm7, [val38]	;xmm7=[0 38*R 0 0 | 0 38*R2 0 0]
 
             movdqu xmm10, xmm2
-            pmulld xmm10, [val74]	;xmm10=[0 74*G 0 0 | 0 74*G2 0 0]
+            pmullw xmm10, [val74]	;xmm10=[0 74*G 0 0 | 0 74*G2 0 0]
 
             movdqu xmm14, xmm1
-            pmulld xmm14, [val112]	;xmm14=[0 112*B 0 0 | 0 112*B 0 0]
+            pmullw xmm14, [val112]	;xmm14=[0 112*B 0 0 | 0 112*B 0 0]
 
-            psubd xmm7, xmm10
-            paddd xmm7, xmm14	
-            paddd xmm7, [val128word]
-            psrld xmm7, 8
-            paddd xmm7, [val128word] 	;xmm7=[0 nuevoU 0 0 | 0 nuevoU2 0 0]
+            psubw xmm14, xmm10
+            psubw xmm14, xmm7	
+            paddw xmm14, [val128word]
+            psraw xmm14, 8
+            paddw xmm14, [val128word] 	;xmm14=[0 nuevoU 0 0 | 0 nuevoU2 0 0]
 
         ;obtengo V     
-            pmulld xmm3, [val112]	;xmm3=[0 112*R 0 0 | 0 112*R2 0 0]
+            pmullw xmm3, [val112]	;xmm3=[0 112*R 0 0 | 0 112*R2 0 0]
 
             movdqu xmm10, xmm2
-            pmulld xmm10, [val94]	;xmm10=[0 94*G 0 0 | 0 94*G 0 0]
+            pmullw xmm10, [val94]	;xmm10=[0 94*G 0 0 | 0 94*G 0 0]
 
-            movdqu xmm14, xmm1
-            pmulld xmm14, [val18]	;xmm14=[0 18*B 0 0 | 0 18*B 0 0]
+            movdqu xmm7, xmm1
+            pmullw xmm7, [val18]	;xmm7=[0 18*B 0 0 | 0 18*B 0 0]
 
-            psubd xmm3, xmm10
-            psubd xmm3, xmm14	
-            paddd xmm3, [val128word]
-            psrld xmm3, 8
-            paddd xmm3, [val128word] 	;xmm3=[0 nuevoV 0 0 | 0 nuevoV2 0 0]
+            psubw xmm3, xmm10
+            psubw xmm3, xmm7	
+            paddw xmm3, [val128word]
+            psraw xmm3, 8
+            paddw xmm3, [val128word] 	;xmm3=[0 nuevoV 0 0 | 0 nuevoV2 0 0]
 
         ;acomodo Y
             packuswb xmm12, xmm0 	;xmm12=[---- | ---- | 0 nuevoY 0 0 | 0 nuevoY2 0 0]
 
-        ;acomodo U    
-            packuswb xmm7, xmm0
-            pslldq xmm7, 1 			;xmm7=[---- | ---- | 0 0 nuevoU 0 | 0 0 nuevoU2 0]
+        ;acomodo U   
+            packuswb xmm14, xmm0 	;xmm14=[---- | ---- | 0 0 nuevoU 0 | 0 0 nuevoU2 0]
+            pslldq xmm14, 1 
 
         ;acomodo V
-            packuswb xmm3, xmm0
-            pslldq xmm3, 2 			;xmm3=[---- | ---- | 0 0 0 nuevoV | 0 0 0 nuevoV2]
+            packuswb xmm3, xmm0 	;xmm3=[---- | ---- | 0 0 0 nuevoV | 0 0 0 nuevoV2]
+            pslldq xmm3, 2
 
         ;junto todo
-            por xmm12, xmm7
-            por xmm12, xmm3         ;xmm12=[---- | ---- | 0 nuevoY nuevoU nuevoV | 0 nuevoY2 nuevoU2 nuevoV2]
+            por xmm3, xmm14
+            por xmm3, xmm12         ;xmm3=[---- | ---- | 0 nuevoY nuevoU nuevoV | 0 nuevoY2 nuevoU2 nuevoV2]
 
         ;muevo el dato a la nueva imagen
-            movq [r13+rbx], xmm12
+            movq [r13+rbx], xmm3
 
             add rbx, 8
             jmp .ciclo
