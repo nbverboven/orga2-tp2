@@ -10,6 +10,7 @@
 #include <malloc.h>
 #include "bmp/bmp.h"
 #include "filters/filters.h"
+#include "rdtsc.h"
 
 
 int run_convertRGBtoYUV(int c, char* src, char* dst);
