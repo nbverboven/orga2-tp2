@@ -249,6 +249,7 @@ int run_maxCloser(int c, char* src, char* dst, float val){
 		FILE *pFile;
 		pFile = fopen( "C_maxCloser_tiempos.txt", "a" );
 		fprintf( pFile, "%li\n", delta );
+		// printf("%s\n", "Paso por acá");
 		fclose( pFile );
 	}
 	else if(c==1)
