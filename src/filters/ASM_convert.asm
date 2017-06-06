@@ -19,20 +19,35 @@ section .rodata
     val208: dd 0, 208, 0, 0
     val409: dd 0, 409, 0, 0
 
-    soloG: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
-    soloB: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
-    soloR: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
+    ; soloG: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
+    ; soloB: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
+    ; soloR: dd 0xffff0000, 0x00000000, 0xffff0000, 0x00000000
 
-    val66:		dw 0, 66, 0, 0, 0, 66, 0, 0
-    val129: 	dw 0, 129, 0, 0, 0, 129, 0, 0
-    val25: 		dw 0, 25, 0, 0, 0, 25, 0, 0
-    val16word: 	dw 0, 16, 0, 0, 0, 16, 0, 0
-    val38: 		dw 0, 38, 0, 0, 0, 38, 0, 0
-    val74: 		dw 0, 74, 0, 0, 0, 74, 0, 0
-    val112: 	dw 0, 112, 0, 0, 0, 112, 0, 0
-    val94: 		dw 0, 94, 0, 0, 0, 94, 0, 0
-    val18: 		dw 0, 18, 0, 0, 0, 18, 0, 0
-    val128word: dw 0, 128, 0, 0, 0, 128, 0, 0
+    soloG: dw 0x0000, 0x0000, 0xffff, 0x0000, 0x0000, 0x0000, 0xffff, 0x0000
+    soloB: dw 0x0000, 0x0000, 0xffff, 0x0000, 0x0000, 0x0000, 0xffff, 0x0000
+    soloR: dw 0x0000, 0x0000, 0xffff, 0x0000, 0x0000, 0x0000, 0xffff, 0x0000
+
+    ; val66:		dw 0, 66, 0, 0, 0, 66, 0, 0
+    ; val129: 	dw 0, 129, 0, 0, 0, 129, 0, 0
+    ; val25: 		dw 0, 25, 0, 0, 0, 25, 0, 0
+    ; val16word: 	dw 0, 16, 0, 0, 0, 16, 0, 0
+    ; val38: 		dw 0, 38, 0, 0, 0, 38, 0, 0
+    ; val74: 		dw 0, 74, 0, 0, 0, 74, 0, 0
+    ; val112: 	dw 0, 112, 0, 0, 0, 112, 0, 0
+    ; val94: 		dw 0, 94, 0, 0, 0, 94, 0, 0
+    ; val18: 		dw 0, 18, 0, 0, 0, 18, 0, 0
+    ; val128word: dw 0, 128, 0, 0, 0, 128, 0, 0
+
+    val66:		dd 0, 66, 0, 66 
+    val129: 	dd 0, 129, 0, 129
+    val25: 		dd 0, 25, 0, 25 
+    val16word: 	dd 0, 16, 0, 16 
+    val38: 		dd 0, 38, 0, 38 
+    val74: 		dd 0, 74, 0, 74 
+    val112: 	dd 0, 112, 0, 112
+    val94: 		dd 0, 94, 0, 94 
+    val18: 		dd 0, 18, 0, 18 
+    val128word: dd 0, 128, 0, 128
 
 section .text
 
@@ -227,98 +242,110 @@ section .text
             mov r12, rdi    ;r12= puntero src
             mov r13, rcx    ;r13= puntero dst
 
-            xor rax,rax
-            mov eax, esi    ;eax= srcwi
-            mov edx, edx    ;edx= srch
-            mul edx         ;rax= srcw*srch
-            mov edx, offset_ARGB
-            mul edx         ;rax= srcw*srch*4
-            mov r14, rax    ;r14= srcw*srch*4
+            ; xor rax,rax
+            ; mov eax, esi    ;eax= srcwi
+            ; mov edx, edx    ;edx= srch
+            ; mul edx         ;rax= srcw*srch
+            ; mov edx, offset_ARGB
+            ; mul edx         ;rax= srcw*srch*4
+            ; mov r14, rax    ;r14= srcw*srch*4
+
+            mov rsi, rsi
+            mov rdx, rdx
+
+            lea rax, [4*rdx] ; rax <- 4*srch
+            mul rsi          ; rax <- 4*srch*srcw
 
             xor rbx, rbx
+            pxor xmm0, xmm0
 
         .ciclo:
-            cmp rbx, r14
-            je .fin
+            cmp rbx, rax
+            jge .fin
 
-            xorps xmm0, xmm0
             movq xmm1, [r12+rbx]
-            punpcklbw xmm1, xmm0    ;xmm1=[A B G R | A2 B2 G2 R2]
+
+            punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
             movdqu xmm2, xmm1
             movdqu xmm3, xmm1
             
         ;solo B
-            pand xmm1, [soloB]      ;xmm1=[0 B 0 0 | 0 B2 0 0]
+            pslldq xmm2, 2
+            pand xmm1, [soloB]      ;xmm1=[0 B2 0 0 | 0 B 0 0]
 
         ;solo G
-            psrldq xmm2, 2
-            pand xmm2, [soloG]      ;xmm2=[0 G 0 0 | 0 G2 0 0]
+            pand xmm2, [soloG]      ;xmm2=[0 G2 0 0 | 0 g 0 0]
            
         ;solo R
-            psrldq xmm3, 4
-            pand xmm3, [soloR]      ;xmm3=[0 R 0 0 | 0 R2 0 0]
+            psrldq xmm3, 2
+            pand xmm3, [soloR]      ;xmm3=[0 R2 0 0 | 0 R 0 0]
 
         ;obtengo Y
             movdqu xmm12, xmm3         
-            pmullw xmm12, [val66]	;xmm12=[0 66*R 0 0 | 0 66*R2 0 0]
+            pmulld xmm12, [val66]	;xmm12=[66*R2 0 | 66*R 0]
 
             movdqu xmm10, xmm2
-            pmullw xmm10, [val129]	;xmm10=[0 129*G 0 0 | 0 129*G2 0 0]
+            pmulld xmm10, [val129]	;xmm10=[129*G2 0 | 129*G 0]
 
             movdqu xmm14, xmm1
-            pmullw xmm14, [val25]	;xmm14=[0 25*B 0 0 | 0 25*B2 0 0]
+            pmulld xmm14, [val25]	;xmm14=[25*B2 0 | 25*B 0]
          
-            paddw xmm12, xmm10
-            paddw xmm12, xmm14	
-            paddw xmm12, [val128word]
-            psraw xmm12, 8
-            paddw xmm12, [val16word] ;xmm12=[0 nuevoY 0 0 | 0 nuevoY2 0 0]
+            paddd xmm12, xmm10
+            paddd xmm12, xmm14	
+            paddd xmm12, [val128word]
+            psrad xmm12, 8
+            paddd xmm12, [val16word] ;xmm12=[nuevoY2 0 | nuevoY 0]
 
         ;obtengo U
             movdqu xmm7, xmm3      
-            pmullw xmm7, [val38]	;xmm7=[0 38*R 0 0 | 0 38*R2 0 0]
+            pmulld xmm7, [val38]	;xmm7=[38*R2 0 | 38*R 0]
 
             movdqu xmm10, xmm2
-            pmullw xmm10, [val74]	;xmm10=[0 74*G 0 0 | 0 74*G2 0 0]
+            pmulld xmm10, [val74]	;xmm10=[74*G2 0 | 74*G 0]
 
             movdqu xmm14, xmm1
-            pmullw xmm14, [val112]	;xmm14=[0 112*B 0 0 | 0 112*B 0 0]
+            pmulld xmm14, [val112]	;xmm14=[112*B2 0 | 112*B 0]
 
-            psubw xmm14, xmm10
-            psubw xmm14, xmm7	
-            paddw xmm14, [val128word]
-            psraw xmm14, 8
-            paddw xmm14, [val128word] 	;xmm14=[0 nuevoU 0 0 | 0 nuevoU2 0 0]
+            psubd xmm14, xmm10
+            psubd xmm14, xmm7	
+            paddd xmm14, [val128word]
+            psrad xmm14, 8
+            paddd xmm14, [val128word] 	;xmm14=[nuevoU2 0 | nuevoU 0]
 
         ;obtengo V     
-            pmullw xmm3, [val112]	;xmm3=[0 112*R 0 0 | 0 112*R2 0 0]
+            pmulld xmm3, [val112]	;xmm3=[112*R2 0 | 112*R 0]
 
             movdqu xmm10, xmm2
-            pmullw xmm10, [val94]	;xmm10=[0 94*G 0 0 | 0 94*G 0 0]
+            pmulld xmm10, [val94]	;xmm10=[94*G2 0 | 94*G 0]
 
             movdqu xmm7, xmm1
-            pmullw xmm7, [val18]	;xmm7=[0 18*B 0 0 | 0 18*B 0 0]
+            pmulld xmm7, [val18]	;xmm7=[18*B2 0 | 18*B 0]
 
-            psubw xmm3, xmm10
-            psubw xmm3, xmm7	
-            paddw xmm3, [val128word]
-            psraw xmm3, 8
-            paddw xmm3, [val128word] 	;xmm3=[0 nuevoV 0 0 | 0 nuevoV2 0 0]
+            psubd xmm3, xmm10
+            psubd xmm3, xmm7	
+            paddd xmm3, [val128word]
+            psrad xmm3, 8
+            paddd xmm3, [val128word] 	;xmm3=[nuevoV2 0 | nuevoV 0]
 
         ;acomodo Y
-            packuswb xmm12, xmm0 	;xmm12=[---- | ---- | 0 nuevoY 0 0 | 0 nuevoY2 0 0]
+            packusdw xmm12, xmm0 	;xmm12=[ -- | -- | -- | -- | nuevoY2 | 0 | nuevoY | 0 ]
+            pslldq xmm12, 4         ;xmm12=[ 0 | 0 | nuevoY2 | 0 | nuevoY | 0 | 0 | 0 ]
+            pshufhw xmm12, xmm12, 01111111b
 
         ;acomodo U   
-            packuswb xmm14, xmm0 	;xmm14=[---- | ---- | 0 0 nuevoU 0 | 0 0 nuevoU2 0]
-            pslldq xmm14, 1 
+            packusdw xmm14, xmm0 	;xmm14=[ -- | -- | -- | -- | nuevoU2 | 0 | nuevoU | 0 ]
+            pslldq xmm14, 2         ;xmm14=[ 0 | 0 | 0 | nuevoU2 | 0 | nuevoU | 0 | 0 ]
+            pshufhw xmm14, xmm14, 11001111b
 
         ;acomodo V
-            packuswb xmm3, xmm0 	;xmm3=[---- | ---- | 0 0 0 nuevoV | 0 0 0 nuevoV2]
-            pslldq xmm3, 2
+            packusdw xmm3, xmm0 	;xmm3=[ -- | -- | -- | -- | nuevoV2 | 0 | nuevoV | 0 ]
+            pslldq xmm3, 4          ;xmm3=[ 0 | 0 | nuevoV2 | 0 | nuevoV | 0 | 0 | 0 ]
+            pshuflw xmm3, xmm3, 00001100b
 
         ;junto todo
             por xmm3, xmm14
-            por xmm3, xmm12         ;xmm3=[---- | ---- | 0 nuevoY nuevoU nuevoV | 0 nuevoY2 nuevoU2 nuevoV2]
+            por xmm3, xmm12         ;xmm3=[ nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0 ]
+            packuswb xmm3, xmm0
 
         ;muevo el dato a la nueva imagen
             movq [r13+rbx], xmm3
