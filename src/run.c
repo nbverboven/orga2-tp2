@@ -48,33 +48,33 @@ int run_convertRGBtoYUV(int c, char* src, char* dst){
 	
 	if(c==0)
 	{
-		unsigned long start, end;
-		RDTSC_START(start);
+		// unsigned long start, end;
+		// RDTSC_START(start);
 
 		C_convertRGBtoYUV(dataSrc,w,h,dataDst,w,h);
 
-		RDTSC_STOP(end);
-		unsigned long delta = end - start;
+		// RDTSC_STOP(end);
+		// unsigned long delta = end - start;
 
-		FILE *pFile;
-		pFile = fopen( "C_rgb2yuv_tiempos.txt", "a" );
-		fprintf( pFile, "%li\n", delta );
-		fclose( pFile );
+		// FILE *pFile;
+		// pFile = fopen( "C_rgb2yuv_tiempos.txt", "a" );
+		// fprintf( pFile, "%li\n", delta );
+		// fclose( pFile );
 	}
 	else if(c==1)
 	{
-		unsigned long start, end;
-		RDTSC_START(start);
+		// unsigned long start, end;
+		// RDTSC_START(start);
 
 		ASM_convertRGBtoYUV(dataSrc,w,h,dataDst,w,h);
 
-		RDTSC_STOP(end);
-		unsigned long delta = end - start;
+		// RDTSC_STOP(end);
+		// unsigned long delta = end - start;
 
-		FILE *pFile;
-		pFile = fopen( "ASM_rgb2yuv_tiempos.txt", "a" );
-		fprintf( pFile, "%li\n", delta );
-		fclose( pFile );
+		// FILE *pFile;
+		// pFile = fopen( "ASM_rgb2yuv_tiempos.txt", "a" );
+		// fprintf( pFile, "%li\n", delta );
+		// fclose( pFile );
 	}
 	else {return -1;}
 	
@@ -95,33 +95,33 @@ int run_convertYUVtoRGB(int c, char* src, char* dst){
 	
 	if(c==0)
 	{
-		unsigned long start, end;
-		RDTSC_START(start);
+		 unsigned long start, end;
+		 RDTSC_START(start);
 
 		C_convertYUVtoRGB(dataSrc,w,h,dataDst,w,h);
 
-		RDTSC_STOP(end);
-		unsigned long delta = end - start;
+		 RDTSC_STOP(end);
+		 unsigned long delta = end - start;
 
-		FILE *pFile;
-		pFile = fopen( "C_yuv2rgb_tiempos.txt", "a" );
-		fprintf( pFile, "%li\n", delta );
-		fclose( pFile );
+		 FILE *pFile;
+		 pFile = fopen( "C_yuv2rgb_tiempos.txt", "a" );
+		 fprintf( pFile, "%li\n", delta );
+		 fclose( pFile );
 	}
 	else if(c==1)
 	{
-		unsigned long start, end;
-		RDTSC_START(start);
+		 unsigned long start, end;
+		 RDTSC_START(start);
 
 		ASM_convertYUVtoRGB(dataSrc,w,h,dataDst,w,h);
 
-		RDTSC_STOP(end);
-		unsigned long delta = end - start;
+		 RDTSC_STOP(end);
+		 unsigned long delta = end - start;
 
-		FILE *pFile;
-		pFile = fopen( "ASM_yuv2rgb_tiempos.txt", "a" );
-		fprintf( pFile, "%li\n", delta );
-		fclose( pFile );
+		 FILE *pFile;
+		 pFile = fopen( "ASM_yuv2rgb_tiempos.txt", "a" );
+		 fprintf( pFile, "%li\n", delta );
+		 fclose( pFile );
 	}
 	else {return -1;}
 	
