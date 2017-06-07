@@ -252,23 +252,29 @@ section .text
             mov r12, rdi    ;r12= puntero src
             mov r13, rcx    ;r13= puntero dst
 
-            xor rax,rax
-            mov eax, esi    ;eax= srcwi
-            mov edx, edx    ;edx= srch
-            mul edx         ;rax= srcw*srch
-            mov edx, offset_ARGB
-            mul edx         ;rax= srcw*srch*4
-            mov r14, rax    ;r14= srcw*srch*4
+            ; xor rax,rax
+            ; mov eax, esi    ;eax= srcwi
+            ; mov edx, edx    ;edx= srch
+            ; mul edx         ;rax= srcw*srch
+            ; mov edx, offset_ARGB
+            ; mul edx         ;rax= srcw*srch*4
+            ; mov r14, rax    ;r14= srcw*srch*4
+
+            mov rsi, rsi
+            mov rdx, rdx
+
+            lea rax, [4*rdx] ; rax <- 4*srch
+            mul rsi          ; rax <- 4*srch*srcw
 
             xor rbx, rbx
+            pxor xmm0, xmm0
 
         .ciclo:
-            cmp rbx, r14
-            je .fin
+            cmp rbx, rax
+            jge .fin
 
-            xorps xmm0, xmm0
             movq xmm1, [r12+rbx]
-            punpcklbw xmm1, xmm0    ;xmm7=[R2 G2 B2 A2 | R G B A]
+            punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
             movdqu xmm2, xmm1
             movdqu xmm3, xmm1
             
