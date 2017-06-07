@@ -70,7 +70,7 @@ for imp in c asm; do
   done
   
 # maxCloser
-  for v in 0 ; do
+  for v in 0 0.313 0.5 0.713 1; do
   for s in ${SIZES[*]}; do
     run_test "$TP2ALU" "$imp maxCloser" "$TESTINDIR/$img0.$s.bmp" "$imp.$img0.$s.$v.max.bmp" "$v" "$DIFFMAX"
     if [ $ret -ne 0 ]; then exit -1; fi

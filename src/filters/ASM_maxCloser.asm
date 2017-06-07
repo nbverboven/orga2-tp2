@@ -428,11 +428,11 @@ in_range:
         jl .esBorde     ;Me fijo si estoy en el borde izquierdo
 
         sub r15, r12
-        cmp r15, 3
+        cmp r15, 4
         jl .esBorde     ;Me fijo si estoy en el borde de abajo
 
         sub r14, rdx    
-        cmp r14, 3
+        cmp r14, 4
         jl .esBorde     ;Me fijo si estoy en el borde de la derecha
 
         mov rax, 1
