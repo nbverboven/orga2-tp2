@@ -308,27 +308,27 @@ ASM_maxCloser:
         movdqu xmm0, [r12+rax]      ;xmm0 -> [kernel[0][3] | kernel[0][2] | kernel[0][1] | kernel[0][0]]
         movdqu xmm1, [r12+rax+12]   ;xmm1 -> [kernel[0][6] | kernel[0][5] | kernel[0][4] | kernel[0][3]]
 
-        add rax, r8                    ;rax -> -2*srcw
+        add rax, r8                 ;rax -> -2*srcw
         movdqu xmm2, [r12+rax]      ;xmm2 -> [kernel[1][3] | kernel[1][2] | kernel[1][1] | kernel[1][0]]
         movdqu xmm3, [r12+rax+12]   ;xmm3 -> [kernel[1][6] | kernel[1][5] | kernel[1][4] | kernel[1][3]]
 
-        add rax, r8                    ;rax -> -1*srcw
+        add rax, r8                 ;rax -> -1*srcw
         movdqu xmm4, [r12+rax]      ;xmm4 -> [kernel[2][3] | kernel[2][2] | kernel[2][1] | kernel[2][0]]
         movdqu xmm5, [r12+rax+12]   ;xmm5 -> [kernel[2][6] | kernel[2][5] | kernel[2][4] | kernel[2][3]]
 
-        add rax, r8                    ;rax -> 0*srcw
+        add rax, r8                 ;rax -> 0*srcw
         movdqu xmm6, [r12+rax]      ;xmm6 -> [kernel[3][3] | kernel[3][2] | kernel[3][1] | kernel[3][0]]
         movdqu xmm7, [r12+rax+12]   ;xmm7 -> [kernel[3][6] | kernel[3][5] | kernel[3][4] | kernel[3][3]]
 
-        add rax, r8                    ;rax -> 1*srcw
+        add rax, r8                 ;rax -> 1*srcw
         movdqu xmm8, [r12+rax]      ;xmm8 -> [kernel[4][3] | kernel[4][2] | kernel[4][1] | kernel[4][0]]
         movdqu xmm9, [r12+rax+12]   ;xmm9 -> [kernel[4][6] | kernel[4][5] | kernel[4][4] | kernel[4][3]]
 
-        add rax, r8                    ;rax -> 2*srcw
+        add rax, r8                 ;rax -> 2*srcw
         movdqu xmm10, [r12+rax]     ;xmm10 -> [kernel[5][3] | kernel[5][2] | kernel[5][1] | kernel[5][0]]
         movdqu xmm11, [r12+rax+12]  ;xmm11 -> [kernel[5][6] | kernel[5][5] | kernel[5][4] | kernel[5][3]]
 
-        add rax, r8                    ;rax -> 3*srcw
+        add rax, r8                 ;rax -> 3*srcw
         movdqu xmm12, [r12+rax]     ;xmm12 -> [kernel[6][3] | kernel[6][2] | kernel[6][1] | kernel[6][0]]
         movdqu xmm13, [r12+rax+12]  ;xmm13 -> [kernel[6][6] | kernel[6][5] | kernel[6][4] | kernel[6][3]]
 
