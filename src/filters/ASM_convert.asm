@@ -32,34 +32,6 @@ section .rodata
     val94: dd 0, 94, 0, 0
     val18: dd 0, 18, 0, 0
 
-    ; val66:		dw 0, 66, 0, 0, 0, 66, 0, 0
-    ; val129: 	dw 0, 129, 0, 0, 0, 129, 0, 0
-    ; val25: 		dw 0, 25, 0, 0, 0, 25, 0, 0
-    ; val16word: 	dw 0, 16, 0, 0, 0, 16, 0, 0
-    ; valmenos38: dw 0, -38, 0, 0, 0, -38, 0, 0
-    ; valmenos74: dw 0, -74, 0, 0, 0, -74, 0, 0
-    ; val112: 	dw 0, 112, 0, 0, 0, 112, 0, 0
-    ; valmenos94: dw 0, -94, 0, 0, 0, -94, 0, 0
-    ; valmenos18: dw 0, -18, 0, 0, 0, -18, 0, 0
-    ; val128word: dw 0, 128, 0, 0, 0, 128, 0, 0
-
-    ; soloR: dw 0x0000, 0x0000, 0x0000, 0xffff, 0x0000, 0x0000, 0x0000, 0xffff
-    ; soloG: dw 0x0000, 0x0000, 0xffff, 0x0000, 0x0000, 0x0000, 0xffff, 0x0000
-    ; soloB: dw 0x0000, 0xffff, 0x0000, 0x0000, 0x0000, 0xffff, 0x0000, 0x0000
-
-    ; mask_r_1: dd -38, 66, -38, 66
-    ; mask_r_2: dd 112, 0, 112, 0
-    ; mask_g_1: dd -74, 129, -74, 129
-    ; mask_g_2: dd -94, 0, -94, 0
-    ; mask_b_1: dd 112, 25, 112, 25
-    ; mask_b_2: dd -18, 0, -18, 0
-
-    ; mask_128_1: dd 128, 128, 128, 128
-    ; mask_128_2: dd 128, 0, 128, 0
-
-    ; mask_16_y_128: dd 128, 16, 128, 16
-
-
 section .text
 
     ; rdi -> puntero src    (uint8_t)
@@ -252,14 +224,6 @@ section .text
             mov r12, rdi    ;r12= puntero src
             mov r13, rcx    ;r13= puntero dst
 
-            ; xor rax,rax
-            ; mov eax, esi    ;eax= srcwi
-            ; mov edx, edx    ;edx= srch
-            ; mul edx         ;rax= srcw*srch
-            ; mov edx, offset_ARGB
-            ; mul edx         ;rax= srcw*srch*4
-            ; mov r14, rax    ;r14= srcw*srch*4
-
             mov rsi, rsi
             mov rdx, rdx
 
@@ -424,16 +388,12 @@ section .text
             pop rbp            
 
     ret
+;FIN 1 CILO
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ; ; rdi -> puntero src    (uint8_t)
-    ; ; rsi -> srcw   		(uint32_t)
-    ; ; rdx -> srch   		(uint32_t)
-    ; ; rcx -> puntero dst    (uint8_t)
-    ; ; r8 -> dstw    		(uint32_t)
-    ; ; r9 -> dsth    		(uint32_t)
-
-    ; ASM_convertRGBtoYUV:
+; ;EXPERIMENTO 2 UNROLL
+    ;    ASM_convertRGBtoYUV:
     ;         push rbp
     ;         mov rbp, rsp
     ;         push rbx
@@ -446,21 +406,19 @@ section .text
     ;         mov r12, rdi    ;r12= puntero src
     ;         mov r13, rcx    ;r13= puntero dst
 
-    ;         xor rax,rax
-    ;         mov eax, esi    ;eax= srcwi
-    ;         mov edx, edx    ;edx= srch
-    ;         mul edx         ;rax= srcw*srch
-    ;         mov edx, offset_ARGB
-    ;         mul edx         ;rax= srcw*srch*4
-    ;         mov r14, rax    ;r14= srcw*srch*4
+    ;         mov rsi, rsi
+    ;         mov rdx, rdx
+
+    ;         lea rax, [4*rdx] ; rax <- 4*srch
+    ;         mul rsi          ; rax <- 4*srch*srcw
 
     ;         xor rbx, rbx
+    ;         pxor xmm0, xmm0
 
     ;     .ciclo:
-    ;         cmp rbx, r14
-    ;         je .fin
+    ;         cmp rbx, rax
+    ;         jge .fin
 
-    ;         xorps xmm0, xmm0
     ;         movq xmm1, [r12+rbx]
     ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
     ;         movdqu xmm2, xmm1
@@ -468,75 +426,276 @@ section .text
             
     ;     ;solo B
     ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
 
     ;     ;solo G
     ;         psrldq xmm2, 2
-    ;         pand xmm2, [soloG]        ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
            
     ;     ;solo R
     ;         psrldq xmm3, 4
-    ;         pand xmm3, [soloR]        ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
 
     ;     ;obtengo Y
-    ;         movdqu xmm12, xmm3         
-    ;         pmullw xmm12, [val66]	    ;xmm12=[0 0 66*R2 0 | 0 0 66*R 0]
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
 
     ;         movdqu xmm10, xmm2
-    ;         pmullw xmm10, [val129]	;xmm10=[0 0 129*G2 0 | 0 0 129*G 0]
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
 
     ;         movdqu xmm14, xmm1
-    ;         pmullw xmm14, [val25]	    ;xmm14=[0 0 25*B2 0 | 0 0 25*B 0]
-         
-    ;         paddw xmm12, xmm10
-    ;         paddw xmm12, xmm14	
-    ;         paddw xmm12, [val128word]
-    ;         psraw xmm12, 8
-    ;         paddw xmm12, [val16word]  ;xmm12=[0 0 nuevoY2 0 | 0 0 nuevoY 0]
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
 
     ;     ;obtengo U
     ;         movdqu xmm7, xmm3      
-    ;         pmullw xmm7, [valmenos38]	     ;xmm7=[0 0 -38*R2 0 | 0 0 -38*R 0]
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
 
     ;         movdqu xmm10, xmm2
-    ;         pmullw xmm10, [valmenos74]	    ;xmm10=[0 0 -74*G2 0 | 0 0 -74*G 0]
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
 
     ;         movdqu xmm14, xmm1
-    ;         pmullw xmm14, [val112]	 ;xmm14=[0 0 112*B2 0 | 0 0 112*B 0]
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
 
-    ;         paddw xmm7, xmm10
-    ;         paddw xmm7, xmm14	
-    ;         paddw xmm7, [val128word]
-    ;         psraw xmm7, 8
-    ;         paddw xmm7, [val128word] 	;xmm7=[0 0 nuevoU2 0 | 0 0 nuevoU 0]
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
 
     ;     ;obtengo V     
-    ;         pmullw xmm3, [val112]	    ;xmm3=[0 0 112*R2 0 | 0 0 112*R 0]
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
 
     ;         movdqu xmm10, xmm2
-    ;         pmullw xmm10, [valmenos94]	    ;xmm10=[0 0 -94*G2 0 | 0 0 -94*G 0]
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
 
     ;         movdqu xmm14, xmm1
-    ;         pmullw xmm14, [valmenos18]	     ;xmm14=[0 0 -18*B2 0 | 0 0 -18*B 0]
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
 
-    ;         paddw xmm3, xmm10
-    ;         paddw xmm3, xmm14	
-    ;         paddw xmm3, [val128word]
-    ;         psraw xmm3, 8
-    ;         paddw xmm3, [val128word] 	  ;xmm3=[0 0 nuevoV2 0 | 0 0 nuevoV 0]
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
 
     ;     ;acomodo Y
-    ;         pslldq xmm12, 4        ;xmm12=[nuevoY2 0 0 0 | nuevoY 0 0 0]
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
 
-    ;     ;acomodo U   
-    ;         pslldq xmm7, 2         ;xmm7=[0 nuevoU2 0 0 | 0 nuevoU 0 0]
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
 
     ;     ;junto todo
-    ;         por xmm3, xmm7
-    ;         por xmm3, xmm12         
-    ;         packsswb xmm3, xmm0     ;xmm3=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
 
     ;     ;muevo el dato a la nueva imagen
-    ;         movq [r13+rbx], xmm3
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
 
     ;         add rbx, 8
     ;         jmp .ciclo
@@ -551,137 +710,8572 @@ section .text
     ;         pop rbp            
 
     ; ret
+; ;FIN 2 CICLOS
 
-    ; rdi -> puntero src    (uint8_t)
-; rsi -> srcw           (uint32_t)
-; rdx -> srch           (uint32_t)
-; rcx -> puntero dst    (uint8_t)
-; r8 -> dstw            (uint32_t)
-; r9 -> dsth            (uint32_t)
-; ASM_convertRGBtoYUV:
-;   push rbp
-;   mov rbp, rsp
-;   push rbx
-;   push r12
-;   push r13
-;   push r14
-;   push r15        ; Pila alineada
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; ;EXPERIMENTO 4 UNROLL
+    ;    ASM_convertRGBtoYUV:
+    ;         push rbp
+    ;         mov rbp, rsp
+    ;         push rbx
+    ;         push r12
+    ;         push r13
+    ;         push r14
+    ;         push r15
+    ;         ; Pila alineada
 
-;   mov r12, rdi    ;r12= puntero src
-;   mov r13, rcx    ;r13= puntero dst
+    ;         mov r12, rdi    ;r12= puntero src
+    ;         mov r13, rcx    ;r13= puntero dst
 
-;   mov rsi, rsi
-;   mov rdx, rdx
+    ;         mov rsi, rsi
+    ;         mov rdx, rdx
 
-;   mov rax, rdx    ;rax = srch
-;   mul rsi
-;   mov r14, rax    ;r14 = srcw*srch
+    ;         lea rax, [4*rdx] ; rax <- 4*srch
+    ;         mul rsi          ; rax <- 4*srch*srcw
 
-;   xor rbx, rbx
-;   pxor xmm15, xmm15
+    ;         xor rbx, rbx
+    ;         pxor xmm0, xmm0
 
+    ;     .ciclo:
+    ;         cmp rbx, rax
+    ;         jge .fin
 
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
 
-;   .ciclo:
-;   cmp rbx, r14
-;   jge .fin
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
 
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
 
-;   movdqu xmm1, [r12] ; xmm1 <- [ p3 | p2 | p1 | p0 ]
-;   movq xmm0, xmm1    ; xmm0 <- [ -- | -- | p1 | p0 ]
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
 
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
 
-;   punpcklbw xmm0, xmm15 ; xmm0 <- [ r1 | g1 | b1 | a1 || r0 | g0 | b0 | a0 ]
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
 
-;   movdqu xmm2, xmm0
-;   movdqu xmm3, xmm0
-;   movdqu xmm4, xmm0
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
 
-;   pand xmm2, [soloR] ; xmm2 <- [ r1 | 0 | 0 | 0 || r0 | 0 | 0 | 0 ]
-;   pand xmm3, [soloG] ; xmm3 <- [ 0 | g1 | 0 | 0 || 0 | g0 | 0 | 0 ]
-;   pand xmm4, [soloB] ; xmm4 <- [ 0 | 0 | b1 | 0 || 0 | 0 | b0 | 0 ]
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
 
-;   pshufhw xmm2, xmm2, 00110011b
-;   pshuflw xmm2, xmm2, 00110011b
-;   pshufhw xmm3, xmm3, 00100010b
-;   pshuflw xmm3, xmm3, 00100010b
-;   pshufhw xmm4, xmm4, 00010001b
-;   pshuflw xmm4, xmm4, 00010001b
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
 
-
-;   ; xmm2 <- [ 0 | r1 | 0 | r1 || 0 | r0 | 0 | r0 ]
-;   ; xmm3 <- [ 0 | g1 | 0 | g1 || 0 | g0 | 0 | g0 ]
-;   ; xmm4 <- [ 0 | b1 | 0 | b1 || 0 | b0 | 0 | b0 ]
-
-;   movdqu xmm5, xmm2 ; xmm5 <- [ -- | -- | 0 | r1 || -- | -- | 0 | r0 ]
-;   movdqu xmm6, xmm3 ; xmm6 <- [ -- | -- | 0 | g1 || -- | -- | 0 | g0 ]
-;   movdqu xmm7, xmm4 ; xmm7 <- [ -- | -- | 0 | b1 || -- | -- | 0 | b0 ]
-
-;   pmulld xmm2, [mask_r_1] ; xmm2 <- [ 66*r1 | (-38)*r1 || 66*r0 | (-38)*r0 ]
-;   pmulld xmm3, [mask_g_1] ; xmm3 <- [ 129*g1 | (-74)*g1 || 129*g0 | (-74)*g0 ]
-;   pmulld xmm4, [mask_b_1] ; xmm4 <- [ 25*b1 | 112*b1 || 25*b0 | 112*b0 ]
-;   pmulld xmm5, [mask_r_2] ; xmm5 <- [ ---- | 112*r1 || ---- | 112*r0 ]
-;   pmulld xmm6, [mask_g_2] ; xmm6 <- [ ---- | (-94)*g1 || ---- | (-94)*g0 ]
-;   pmulld xmm7, [mask_b_2] ; xmm7 <- [ ---- | (-18)*b1 || ---- | (-18)*b0 ]
-
-;   paddd xmm2, xmm3
-;   paddd xmm2, xmm4 ; xmm2 <- [ 66*r1 + 129*g1 + 25*b1 | (-38)*r1 + (-74)*g1 + 112*b1 || 66*r0 + 129*g0 + 25*b0 | (-38)*r0 + (-74)*g0 + 112*b0 ]
-;   paddd xmm5, xmm6
-;   paddd xmm5, xmm7 ; xmm5 <- [ ---- | 112*r1 + (-94)*g1 + (-18)*b1 || ---- | 112*r0 + (-94)*g0 + (-18)*b0 ]
-
-;   paddd xmm2, [mask_128_1] ; xmm2 <- [ 66*r1 + 129*g1 + 25*b1 + 128 | (-38)*r1 + (-74)*g1 + 112*b1 + 128 || 66*r0 + 129*g0 + 25*b0 + 128 | (-38)*r0 + (-74)*g0 + 112*b0 + 128 ]
-;   paddd xmm5, [mask_128_2] ; xmm5 <- [ ---- | 112*r1 + (-94)*g1 + (-18)*b1 + 128 || ---- | 112*r0 + (-94)*g0 + (-18)*b0 + 128 ]
-
-;   psrad xmm2, 8 ; xmm2 <- [ (66*r1 + 129*g1 + 25*b1 + 128) >> 8 | ((-38)*r1 + (-74)*g1 + 112*b1 + 128) >> 8 || (66*r0 + 129*g0 + 25*b0 + 128) >> 8 | ((-38)*r0 + (-74)*g0 + 112*b0 + 128) >> 8 ]
-;   psrad xmm5, 8 ; xmm5 <- [ ---- | (112*r1 + (-94)*g1 + (-18)*b1 + 128) >> 8 || ---- | (112*r0 + (-94)*g0 + (-18)*b0 + 128) >> 8 ]
-
-;   paddd xmm2, [mask_16_y_128] ; xmm2 <- [ ((66*r1 + 129*g1 + 25*b1 + 128) >> 8) + 16 | (((-38)*r1 + (-74)*g1 + 112*b1 + 128) >> 8) + 128 || ((66*r0 + 129*g0 + 25*b0 + 128) >> 8) + 16 | (((-38)*r0 + (-74)*g0 + 112*b0 + 128) >> 8) + 128 ]
-;   paddd xmm5, [mask_128_2] ; xmm5 <- [ ---- | ((112*r1 + (-94)*g1 + (-18)*b1 + 128) >> 8) + 128 || ---- | ((112*r0 + (-94)*g0 + (-18)*b0 + 128) >> 8) + 128 ]
-
-;   ; xmm2 <- [ y1 | u1 || y0 | u0 ]
-;   ; xmm5 <- [ -- | v1 || -- | v0 ]
-
-;   movdqu xmm3, xmm2
-;   movdqu xmm6, xmm5
-
-;   pslldq xmm3, 8  ; xmm3 <- [ y0 | u0 | 0 | 0 ]
-;   pslldq xmm5, 12 ; xmm5 <- [ v0 | 0 | 0 | 0 ]
-;   psrldq xmm5, 12 ; xmm5 <- [ 0 | 0 | 0 | v0 ]
-;   pslldq xmm6, 4  ; xmm6 <- [ v1 | -- | v0 | 0 ]
-;   psrldq xmm6, 12 ; xmm6 <- [ 0 | 0 | 0 | v1 ]
-
-;   pblendw xmm2, xmm6, 00001111b ; xmm2 <- [ y1 | u1 | 0 | v1 ]
-;   por xmm5, xmm3 ; xmm5 <- [ y0 | u0 | 0 | v0 ]
-
-;   packusdw xmm5, xmm2 ; xmm5 <- [ y1 | u1 | 0 | v1 || y0 | u0 | 0 | v0 ]
-
-;   pshufhw xmm5, xmm5, 11100001b
-;   pshuflw xmm5, xmm5, 11100001b ; xmm5 <- [ y1 | u1 | v1 | 0 || y0 | u0 | v0 | 0 ]
-;   pblendw xmm0, xmm5, 11101110b ; xmm0 <- [ y1 | u1 | v1 | a1 || y0 | u0 | v0 | a0 ]
-
-;   packuswb xmm0, xmm15
-
-
-;   movq [r13], xmm0
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
 
 
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
 
-;   add rbx, 2
-;   add r12, 8
-;   add r13, 8
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
 
-;   jmp .ciclo
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
 
 
-;   .fin:
-;   pop r15
-;   pop r14
-;   pop r13
-;   pop r12
-;   pop rbx
-;   pop rbp
-;   ret
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
 
 
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
 
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+    ;         jmp .ciclo
+
+    ;     .fin:
+    ;         ; Desencolo
+    ;         pop r15
+    ;         pop r14
+    ;         pop r13
+    ;         pop r12
+    ;         pop rbx
+    ;         pop rbp            
+
+    ; ret
+; ;FIN 4 CICLOS
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ;EXPERIMENTO 8 UNROLL
+    ;    ASM_convertRGBtoYUV:
+    ;         push rbp
+    ;         mov rbp, rsp
+    ;         push rbx
+    ;         push r12
+    ;         push r13
+    ;         push r14
+    ;         push r15
+    ;         ; Pila alineada
+
+    ;         mov r12, rdi    ;r12= puntero src
+    ;         mov r13, rcx    ;r13= puntero dst
+
+    ;         mov rsi, rsi
+    ;         mov rdx, rdx
+
+    ;         lea rax, [4*rdx] ; rax <- 4*srch
+    ;         mul rsi          ; rax <- 4*srch*srcw
+
+    ;         xor rbx, rbx
+    ;         pxor xmm0, xmm0
+
+    ;     .ciclo:
+    ;         cmp rbx, rax
+    ;         jge .fin
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+    ;         jmp .ciclo
+
+    ;     .fin:
+    ;         ; Desencolo
+    ;         pop r15
+    ;         pop r14
+    ;         pop r13
+    ;         pop r12
+    ;         pop rbx
+    ;         pop rbp            
+
+    ; ret
+; ;FIN 8 CICLOS
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ;EXPERIMENTO 16 UNROLL
+    ;    ASM_convertRGBtoYUV:
+    ;         push rbp
+    ;         mov rbp, rsp
+    ;         push rbx
+    ;         push r12
+    ;         push r13
+    ;         push r14
+    ;         push r15
+    ;         ; Pila alineada
+
+    ;         mov r12, rdi    ;r12= puntero src
+    ;         mov r13, rcx    ;r13= puntero dst
+
+    ;         mov rsi, rsi
+    ;         mov rdx, rdx
+
+    ;         lea rax, [4*rdx] ; rax <- 4*srch
+    ;         mul rsi          ; rax <- 4*srch*srcw
+
+    ;         xor rbx, rbx
+    ;         pxor xmm0, xmm0
+
+    ;     .ciclo:
+    ;         cmp rbx, rax
+    ;         jge .fin
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+    ;         jmp .ciclo
+
+    ;     .fin:
+    ;         ; Desencolo
+    ;         pop r15
+    ;         pop r14
+    ;         pop r13
+    ;         pop r12
+    ;         pop rbx
+    ;         pop rbp            
+
+    ; ret
+; ;FIN 16 CICLOS
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ;EXPERIMENTO 32 UNROLL
+    ;    ASM_convertRGBtoYUV:
+    ;         push rbp
+    ;         mov rbp, rsp
+    ;         push rbx
+    ;         push r12
+    ;         push r13
+    ;         push r14
+    ;         push r15
+    ;         ; Pila alineada
+
+    ;         mov r12, rdi    ;r12= puntero src
+    ;         mov r13, rcx    ;r13= puntero dst
+
+    ;         mov rsi, rsi
+    ;         mov rdx, rdx
+
+    ;         lea rax, [4*rdx] ; rax <- 4*srch
+    ;         mul rsi          ; rax <- 4*srch*srcw
+
+    ;         xor rbx, rbx
+    ;         pxor xmm0, xmm0
+
+    ;     .ciclo:
+    ;         cmp rbx, rax
+    ;         jge .fin
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8
+
+    ;         movq xmm1, [r12+rbx]
+    ;         punpcklbw xmm1, xmm0    ;xmm1=[R2 G2 B2 A2 | R G B A]
+    ;         movdqu xmm2, xmm1
+    ;         movdqu xmm3, xmm1
+            
+    ;     ;solo B
+    ;         pand xmm1, [soloB]      ;xmm1=[0 0 B2 0 | 0 0 B 0]
+    ;         movdqu xmm4, xmm1
+    ;         punpckhwd xmm1, xmm0    ;xmm1=[0 0 B2 0]
+    ;         punpcklwd xmm4, xmm0    ;xmm4=[0 0 B 0]
+
+    ;     ;solo G
+    ;         psrldq xmm2, 2
+    ;         pand xmm2, [soloG]      ;xmm2=[0 0 G2 0 | 0 0 G 0]
+    ;         movdqu xmm5, xmm2
+    ;         punpckhwd xmm2, xmm0    ;xmm2=[0 0 G2 0]
+    ;         punpcklwd xmm5, xmm0    ;xmm5=[0 0 G 0]
+           
+    ;     ;solo R
+    ;         psrldq xmm3, 4
+    ;         pand xmm3, [soloR]      ;xmm3=[0 0 R2 0 | 0 0 R 0]
+    ;         movdqu xmm6, xmm3
+    ;         punpckhwd xmm3, xmm0    ;xmm3=[0 0 R2 0]
+    ;         punpcklwd xmm6, xmm0    ;xmm6=[0 0 R 0]
+
+    ;     ;obtengo Y
+    ;         movdqu xmm12, xmm3      
+    ;         movdqu xmm13, xmm6      
+    ;         pmulld xmm12, [val66]   ;xmm12=[0 0 66*R2  0]
+    ;         pmulld xmm13, [val66]   ;xmm13=[0 0 66*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val129]  ;xmm10=[0 0 129*G2 0]
+    ;         pmulld xmm11, [val129]  ;xmm11=[0 0 129*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val25]   ;xmm14=[0 0 25*B2 0]
+    ;         pmulld xmm15, [val25]   ;xmm15=[0 0 25*B 0]
+
+    ;         paddd xmm12, xmm10
+    ;         paddd xmm13, xmm11
+    ;         paddd xmm12, xmm14  
+    ;         paddd xmm13, xmm15
+    ;         paddd xmm12, [val128]
+    ;         paddd xmm13, [val128]
+    ;         psrad xmm12, 8
+    ;         psrad xmm13, 8
+    ;         paddd xmm12, [val16]    ;xmm12=[0 0 nuevoY2 0]
+    ;         paddd xmm13, [val16]    ;xmm13=[0 0 nuevoY2 0]
+
+    ;     ;obtengo U
+    ;         movdqu xmm7, xmm3      
+    ;         movdqu xmm8, xmm6      
+    ;         pmulld xmm7, [valmenos38]   ;xmm7=[0 0 -38*R2 0]
+    ;         pmulld xmm8, [valmenos38]   ;xmm8=[0 0 -38*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val74]   ;xmm10=[0 0 74*G2 0]
+    ;         pmulld xmm11, [val74]   ;xmm11=[0 0 74*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val112]  ;xmm14=[0 0 112*B2 0]
+    ;         pmulld xmm15, [val112]  ;xmm15=[0  0 112*B 0]
+
+    ;         psubd xmm7, xmm10
+    ;         psubd xmm8, xmm11
+    ;         paddd xmm7, xmm14   
+    ;         paddd xmm8, xmm15
+    ;         paddd xmm7, [val128]
+    ;         paddd xmm8, [val128]
+    ;         psrad xmm7, 8
+    ;         psrad xmm8, 8
+    ;         paddd xmm7, [val128]    ;xmm7=[0 0 nuevoU2 0]
+    ;         paddd xmm8, [val128]    ;xmm8=[0 0 nuevoU 0]
+
+
+    ;     ;obtengo V     
+    ;         pmulld xmm3, [val112]   ;xmm3=[0 0 112*R2 0]
+    ;         pmulld xmm6, [val112]   ;xmm6=[0 0 112*R 0]
+
+    ;         movdqu xmm10, xmm2
+    ;         movdqu xmm11, xmm5
+    ;         pmulld xmm10, [val94]   ;xmm10=[0 0 94*G2 0]
+    ;         pmulld xmm11, [val94]   ;xmm11=[0 0 94*G 0]
+
+    ;         movdqu xmm14, xmm1
+    ;         movdqu xmm15, xmm4
+    ;         pmulld xmm14, [val18]   ;xmm14=[0 0 18*B2 0]
+    ;         pmulld xmm15, [val18]   ;xmm15=[0 0 18*B 0]
+
+    ;         psubd xmm3, xmm10
+    ;         psubd xmm6, xmm11
+    ;         psubd xmm3, xmm14   
+    ;         psubd xmm6, xmm15
+    ;         paddd xmm3, [val128]
+    ;         paddd xmm6, [val128]
+    ;         psrad xmm3, 8
+    ;         psrad xmm6, 8
+    ;         paddd xmm3, [val128]    ;xmm3=[0 0 nuevoV2 0]
+    ;         paddd xmm6, [val128]    ;xmm6=[0 0 nuevoV 0]
+
+    ;     ;acomodo Y
+    ;         packusdw xmm12, xmm0
+    ;         packuswb xmm12, xmm0
+    ;         packusdw xmm13, xmm0
+    ;         packuswb xmm13, xmm0
+    ;         pslldq xmm12, 6
+    ;         pslldq xmm13, 2
+    ;         por xmm12, xmm13        ;xmm12=[---- | ---- | nuevoY2 0 0 0 | nuevoY 0 0 0]
+
+    ;     ;acomodo U    
+    ;         packusdw xmm7, xmm0
+    ;         packuswb xmm7, xmm0
+    ;         packusdw xmm8, xmm0
+    ;         packuswb xmm8, xmm0
+    ;         pslldq xmm7, 5
+    ;         pslldq xmm8, 1
+    ;         por xmm7, xmm8        ;xmm7=[---- | ---- | 0 nuevoU2 0 0 | 0 nuevoU 0 0]
+
+    ;     ;acomodo V
+    ;         packusdw xmm3, xmm0
+    ;         packuswb xmm3, xmm0
+    ;         packusdw xmm6, xmm0
+    ;         packuswb xmm6, xmm0
+    ;         pslldq xmm3, 4
+    ;         por xmm3, xmm6          ;xmm3=[---- | ---- | 0 0 nuevoV2 0 | 0 0 nuevoV 0]
+
+    ;     ;junto todo
+    ;         por xmm12, xmm7
+    ;         por xmm12, xmm3         ;xmm12=[---- | ---- | nuevoY2 nuevoU2 nuevoV2 0 | nuevoY nuevoU nuevoV 0]
+
+    ;     ;muevo el dato a la nueva imagen
+    ;         movq [r13+rbx], xmm12
+
+    ;         add rbx, 8    
+    ;         jmp .ciclo
+
+    ;     .fin:
+    ;         ; Desencolo
+    ;         pop r15
+    ;         pop r14
+    ;         pop r13
+    ;         pop r12
+    ;         pop rbx
+    ;         pop rbp            
+
+    ; ret
+; ;FIN 32 CICLOS
