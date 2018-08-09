@@ -1,6 +1,0 @@
-run asm rgb2yuv ../src/img/lena.bmp ../src/img/lena_rgb2yuv.bmp
-
-b ASM_convert.asm:101
-
-
-p *(struct s_RGBA*) $
